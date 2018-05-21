@@ -19,3 +19,6 @@
 *.bin
 *.map
 BUILD/*
+.cproject
+.project
+*.launch

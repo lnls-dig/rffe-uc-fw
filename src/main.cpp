@@ -583,6 +583,7 @@ int main( void )
                         v_patch = Data[2];
                         fw_size_cnt = 0;
                         fw_buffer = (uint8_t *) malloc(256);
+                        iap.erase( UPDATE_SECTOR_START, UPDATE_SECTOR_END);
                         break;
 
                     case 2:

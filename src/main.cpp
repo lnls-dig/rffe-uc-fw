@@ -93,8 +93,8 @@ struct bsmp_var rffe_vars[] = {
     RFFE_VAR( PID_BD_Kc,      READ_WRITE ), // PID_BD_Kc
     RFFE_VAR( PID_BD_tauI,    READ_WRITE ), // PID_BD_tauI
     RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
-    RFFE_VAR( IP_Addr,        READ_ONLY ), // Ip Address
-    RFFE_VAR( MAC_Addr,       READ_ONLY ), // MAC Address
+    RFFE_VAR( IP_Addr,        READ_WRITE ), // Ip Address
+    RFFE_VAR( MAC_Addr,       READ_WRITE ), // MAC Address
 };
 
 /* BSMP server */

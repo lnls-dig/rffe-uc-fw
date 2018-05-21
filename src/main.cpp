@@ -64,6 +64,8 @@ double PID_BD_Kc[1];
 double PID_BD_tauI[1];
 double PID_BD_tauD[1];
 char IP_Addr[16];
+char Mask_Addr[16];
+char Gateway_Addr[16];
 char MAC_Addr[18];
 
 #define READ_ONLY  0
@@ -126,6 +128,10 @@ DigitalOut dataD(P0_11); // Data line to attenuator. LVTTL, low = reset, init = 
 DigitalOut CS_dac(P0_24); // Chip select for DAC. LVTTL, low = Selected, init = high.Chip select
 RawSerial pc(P0_2, P0_3); // Serial USB port. (NOTE: All printf() calls are redirected to this port)
 SPI spi1(P0_9,P0_8,P0_7); //SPI Interface - spi(mosi, miso, sclk)
+
+I2C feram_i2c(P0_19, P0_20);
+DigitalOut feram_wp(P0_21);
+FeRAM feram(feram_i2c, feram_wp);
 
 bool get_eth_link_status(void)
 {
@@ -451,6 +457,18 @@ int main( void )
     //PID_BD tauI parameter
     set_value(PID_BD_tauD, 2);
 
+    printf("Getting ETH configuration from FeRAM...\n\r");
+    feram.get_ip_addr(IP_Addr);
+    feram.get_mac_addr(MAC_Addr);
+    feram.get_gateway_addr(Gateway_Addr);
+    feram.get_mask_addr(Mask_Addr);
+
+    printf("Values from FeRAM:\n\r");
+    printf("IP : %s\n\r", IP_Addr);
+    printf("Mask : %s\n\r", Mask_Addr);
+    printf("Gateway : %s\n\r", Gateway_Addr);
+    printf("MAC : %s\n\n\r", MAC_Addr);
+
     for ( uint8_t i = 0; i < sizeof(rffe_vars)/sizeof(rffe_vars[0]); i++) {
         rffe_vars[i].info.id = i;
         bsmp_register_variable( bsmp, &rffe_vars[i] );
@@ -490,7 +508,7 @@ int main( void )
     net.set_dhcp(true);
 #else
 #if defined(ETH_FIXIP)
-    net.set_network(ETH_IP,ETH_MASK,ETH_GATEWAY);
+    net.set_network(IP_Addr,Mask_Addr,Gateway_Addr);
 #else
 #error "No Ethernet addressing mode selected! Please choose between DHCP or Fixed IP!"
 #endif
@@ -504,8 +522,6 @@ int main( void )
         }
         printf("Success! RFFE eth server is up!\n");
 
-        strncpy(IP_Addr, net.get_ip_address(), sizeof(IP_Addr));
-        strncpy(MAC_Addr, net.get_mac_address(), sizeof(MAC_Addr));
         printf("RFFE IP: %s\n", IP_Addr);
         printf("RFFE MAC Address: %s\n", MAC_Addr);
 

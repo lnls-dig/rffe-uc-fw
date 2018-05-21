@@ -277,16 +277,7 @@ $(warning ETH_INTERFACE not explicitly defined! Using default option: $(ETH_INTE
 endif
 
 ifeq ($(ETH_INTERFACE),FIX_IP)
-ifndef IP
-$(error IP is not set)
-endif
-ifndef GATEWAY
-$(error GATEWAY is not set)
-endif
 CXX_FLAGS += -DETH_FIXIP
-CXX_FLAGS += -DETH_IP=\"$(IP)\"
-CXX_FLAGS += -DETH_GATEWAY=\"$(GATEWAY)\"
-CXX_FLAGS += -DETH_MASK=\"255.255.255.0\"
 else
 ifeq ($(ETH_INTERFACE),DHCP)
 CXX_FLAGS += -DETH_DHCP

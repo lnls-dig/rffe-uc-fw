@@ -619,11 +619,13 @@ int main( void )
                         full_page = true;
                     } else {
                         memcpy(&fw_buffer[FILE_DATASIZE], Data, FILE_DATASIZE);
+                        /* A full firmware page was sent, copy data to file */
+                        __disable_irq();
+                        iap.write((uint32_t *)&fw_buffer[0], (uint32_t *)(UPDATE_ADDRESS_OFFSET+fw_size_cnt), 256);
+                        __enable_irq();
+                        fw_size_cnt += FILE_DATASIZE*2;
                         full_page = false;
                     }
-                    /* A full firmware page was sent, copy data to file */
-                    iap.write((uint32_t *)&fw_buffer[0], (uint32_t *)(UPDATE_ADDRESS_OFFSET+fw_size_cnt), sizeof(fw_buffer));
-                    fw_size_cnt += FILE_DATASIZE;
                 }
 
                 if (get_value8(Reset) == 1) {

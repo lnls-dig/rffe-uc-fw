@@ -48,6 +48,7 @@ PROJECT := rffe-fw
 
 OBJECTS += ./src/Drivers/ADT7320.o
 OBJECTS += ./src/Drivers/LM71.o
+OBJECTS += ./src/Drivers/feram.o
 OBJECTS += ./src/Drivers/DAC7554.o
 OBJECTS += ./src/PID/PID.o
 OBJECTS += ./src/bsmp/bsmp.o

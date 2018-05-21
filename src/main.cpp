@@ -586,16 +586,17 @@ int main( void )
 
                     case 2:
                     {
-                        uint32_t *last_page_addr = (uint32_t *) UPDATE_ADDRESS_OFFSET+0x27F00;
+                        uint32_t *last_page_addr = (uint32_t *)(UPDATE_ADDRESS_OFFSET+0x37f00);
                         memcpy(fw_buffer, last_page_addr, 256);
                         /* Write the bootloader magic word in the last 4 bytes of the page */
-                        uint32_t magic_word[] = {BOOTLOADER_MAGIC_WORD};
-                        memcpy(&fw_buffer[251], magic_word, sizeof(magic_word));
+                        const uint32_t magic_word[] = {BOOTLOADER_MAGIC_WORD};
+                        memcpy(&fw_buffer[252], magic_word, sizeof(magic_word));
+
                         /* Store version number */
                         fw_buffer[248] = v_major;
                         fw_buffer[249] = v_minor;
                         fw_buffer[250] = v_patch;
-                        iap.write((uint32_t *)&fw_buffer[0], last_page_addr, sizeof(fw_buffer));
+                        iap.write((uint32_t *)&fw_buffer[0], last_page_addr, 256);
                         break;
                     }
                     default:

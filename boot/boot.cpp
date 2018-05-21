@@ -28,6 +28,7 @@ void update_firmware( void )
 
     memset(&page[0], 0xFF, sizeof(page));
 
+    __disable_irq();
     iap.erase( RUNTIME_SECTOR_START, RUNTIME_SECTOR_END );
 
     for ( offset = 0; offset < fw_size; dst += sizeof(page)/4) {
@@ -42,4 +43,5 @@ void update_firmware( void )
         memset(&page[0], 0xFF, sizeof(page));
     }
     iap.erase( UPDATE_SECTOR_START, UPDATE_SECTOR_END );
+    __enable_irq();
 }

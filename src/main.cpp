@@ -467,7 +467,7 @@ int main( void )
     printf("\nRFFE Firmware Version: %s\n", FW_VERSION);
 
     IAP iap;
-    uint8_t fw_buffer[256];
+    uint8_t *fw_buffer;
     uint8_t state = 0;
     uint32_t fw_size_cnt = 0;
     bool full_page = false;
@@ -582,6 +582,7 @@ int main( void )
                         v_minor = Data[1];
                         v_patch = Data[2];
                         fw_size_cnt = 0;
+                        fw_buffer = (uint8_t *) malloc(256);
                         break;
 
                     case 2:
@@ -597,6 +598,7 @@ int main( void )
                         fw_buffer[249] = v_minor;
                         fw_buffer[250] = v_patch;
                         iap.write((uint32_t *)&fw_buffer[0], last_page_addr, 256);
+                        free(fw_buffer);
                         break;
                     }
                     default:

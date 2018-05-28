@@ -1,0 +1,12 @@
+{
+    "macros": [
+        "NDEBUG=1",
+        "OS_TASKCNT=4",
+        "OS_IDLESTKSIZE=32",
+        "OS_STKSIZE=1",
+        "OS_TIMERS=1",
+        "OS_FIFOSZ=4",
+        "OS_MUTEXCNT=2",
+        "MEMP_MEM_MALLOC=1"
+    ]
+}

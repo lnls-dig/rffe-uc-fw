@@ -68,6 +68,7 @@ char Mask_Addr[16];
 char Gateway_Addr[16];
 char MAC_Addr[18];
 
+char mac_buffer[6];
 #define READ_ONLY  0
 #define READ_WRITE 1
 
@@ -461,9 +462,9 @@ int main( void )
 
     printf("Getting ETH configuration from FeRAM...\n\r");
     feram.get_ip_addr(IP_Addr);
-    feram.get_mac_addr(MAC_Addr);
     feram.get_gateway_addr(Gateway_Addr);
     feram.get_mask_addr(Mask_Addr);
+    feram.get_mac_addr(MAC_Addr, mac_buffer);
 
     printf("Values from FeRAM:\n\r");
     printf("IP : %s\n\r", IP_Addr);

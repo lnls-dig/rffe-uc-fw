@@ -36,7 +36,7 @@ int FeRAM::read(uint16_t addr, char *buffer, size_t len)
     return err;
 }
 
-int FeRAM::get_mac_addr(char *mac_str)
+int FeRAM::get_mac_addr(char *mac_str, char* mac_buf)
 {
     int err;
     char mac[6] = {0};
@@ -45,6 +45,9 @@ int FeRAM::get_mac_addr(char *mac_str)
 
     snprintf(mac_str, 18, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
+    if (mac_buf) {
+        memcpy(mac_buf, mac, 6);
+    }
     return err;
 }
 

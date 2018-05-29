@@ -15,7 +15,7 @@ public:
     int read(uint16_t addr, char *buffer, size_t len); /* 11bit address */
     int write(uint16_t addr, char *buffer, size_t len);
 
-    int get_mac_addr(char *mac_str);
+    int get_mac_addr(char *mac_str, char *mac_buf);
     int get_ip_addr(char *ip_str);
     int get_mask_addr(char *mask_str);
     int get_gateway_addr(char *gateway_str);

@@ -69,6 +69,12 @@ char Gateway_Addr[16];
 char MAC_Addr[18];
 
 char mac_buffer[6];
+
+extern "C" void mbed_mac_address(char *s) {
+    // Write your code to get the MAC address from the 25AA02E48 into mac[6]
+    memcpy(s, mac_buffer, 6);
+}
+
 #define READ_ONLY  0
 #define READ_WRITE 1
 

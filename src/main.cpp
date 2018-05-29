@@ -129,6 +129,8 @@ DigitalOut CS_dac(P0_24); // Chip select for DAC. LVTTL, low = Selected, init = 
 RawSerial pc(P0_2, P0_3); // Serial USB port. (NOTE: All printf() calls are redirected to this port)
 SPI spi1(P0_9,P0_8,P0_7); //SPI Interface - spi(mosi, miso, sclk)
 
+I2C pll_i2c(P0_27, P0_28);
+CDCE906 pll(pll_i2c, 0b11010010);
 I2C feram_i2c(P0_19, P0_20);
 DigitalOut feram_wp(P0_21);
 FeRAM feram(feram_i2c, feram_wp);
@@ -495,6 +497,10 @@ int main( void )
     struct bsmp_raw_packet response;
     uint8_t buf[BUFSIZE];
     uint8_t bufresponse[BUFSIZE];
+
+    led4 = !pll.cfg_eth();
+
+    Thread::wait(100);
 
     // Ethernet initialization
     EthernetInterface net;

@@ -32,10 +32,6 @@ int CDCE906::cfg_eth( void )
     cfg[24] = 0;    /* Y5 */
     cfg[25] = (3<<4)|0xB;
 
-    float ss_val[4] = {0,0.1,0.25,0.4};
-    printf("SSC modulation amount: %f\n\r",ss_val[cfg[25]>>4]);
-    err = _write(0, cfg, sizeof(cfg));
-
     return err;
 }
 

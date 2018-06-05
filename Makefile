@@ -46,10 +46,9 @@ PROJECT := rffe-fw
 ###############################################################################
 # Objects and Paths
 
-OBJECTS += ./src/Drivers/ADT7320.o
-OBJECTS += ./src/Drivers/LM71.o
 OBJECTS += ./src/Drivers/feram.o
 OBJECTS += ./src/Drivers/CDCE906.o
+OBJECTS += ./src/Drivers/ADT7320.o
 OBJECTS += ./src/Drivers/DAC7554.o
 OBJECTS += ./src/PID/PID.o
 OBJECTS += ./src/bsmp/bsmp.o
@@ -149,7 +148,7 @@ INCLUDE_PATHS += -I.././src/PID
 INCLUDE_PATHS += -I.././src/bsmp
 INCLUDE_PATHS += -I.././src/bsmp/md5
 
-LIBRARY_PATHS := -L./
+LIBRARY_PATHS := -L./ -L../lib/
 LIBRARIES := -lmbed-os
 LINKER_SCRIPT ?= .././linker/LPC1768.ld
 
@@ -271,9 +270,11 @@ endif
 
 ifeq ($(TEMP_SENSOR),LM71)
 CXX_FLAGS += -DTEMP_SENSOR_LM71
+OBJECTS += ./src/Drivers/LM71.o
 else
 ifeq ($(TEMP_SENSOR),ADT7320)
 CXX_FLAGS += -DTEMP_SENSOR_ADT7320
+OBJECTS += ./src/Drivers/ADT7320.o
 endif
 endif
 

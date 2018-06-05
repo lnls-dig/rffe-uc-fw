@@ -59,9 +59,14 @@ OBJECTS += ./src/cli.o
 OBJECTS += ./src/main.o
 OBJECTS += ./src/pcbnAPI.o
 OBJECTS += ./src/util.o
+OBJECTS += ./boot/IAP.o
+
+BOOT_OBJECTS += ./boot/boot.o
+BOOT_OBJECTS += ./boot/IAP.o
 
 INCLUDE_PATHS += -I../
 INCLUDE_PATHS += -I../.
+INCLUDE_PATHS += -I.././boot
 INCLUDE_PATHS += -I.././mbed-os
 INCLUDE_PATHS += -I.././mbed-os/cmsis
 INCLUDE_PATHS += -I.././mbed-os/cmsis/TARGET_CORTEX_M
@@ -145,7 +150,7 @@ INCLUDE_PATHS += -I.././src/bsmp/md5
 
 LIBRARY_PATHS := -L./
 LIBRARIES := -lmbed-os
-LINKER_SCRIPT ?= .././mbed-os/targets/TARGET_NXP/TARGET_LPC176X/device/TOOLCHAIN_GCC_ARM/LPC1768.ld
+LINKER_SCRIPT ?= .././linker/LPC1768.ld
 
 # Objects and Paths
 ###############################################################################
@@ -295,7 +300,7 @@ ASM_FLAGS += -DARM_MATH_CM3
 
 FW_VERSION := $(shell $(MACROS) -E -dM ../src/main.cpp $(CXX_FLAGS) $(INCLUDE_PATHS) | grep "\#define FW_VERSION " | grep -oP "(V\d\_\d\_\d)")
 
-LD_FLAGS :=-Wl,--gc-sections -Wl,--wrap,main -Wl,--wrap,_memalign_r -Wl,--wrap,exit -Wl,--wrap,atexit -Wl,-n -mcpu=cortex-m3 -mthumb -Wl,-Map=$(FW_VERSION).map
+LD_FLAGS :=-Wl,--gc-sections -Wl,--wrap,main -Wl,--wrap,_memalign_r -Wl,--wrap,exit -Wl,--wrap,atexit -Wl,-n -mcpu=cortex-m3 -mthumb
 LD_SYS_LIBS :=-Wl,--start-group -lstdc++ -lsupc++ -lm -lc -lgcc -lnosys -Wl,--end-group
 
 
@@ -303,7 +308,7 @@ LD_SYS_LIBS :=-Wl,--start-group -lstdc++ -lsupc++ -lm -lc -lgcc -lnosys -Wl,--en
 ###############################################################################
 # Rules
 
-all: $(FW_VERSION).bin
+all: $(FW_VERSION).bin bootloader.bin
 
 mbed-os:
 	@$(MAKE) -C ../ -f mbed-os.mk
@@ -336,9 +341,9 @@ mbed-os:
 $(FW_VERSION).link_script.ld: $(LINKER_SCRIPT)
 	@$(PREPROC) $< -o $@
 
-$(FW_VERSION).elf: mbed-os $(OBJECTS) $(SYS_OBJECTS) $(FW_VERSION).link_script.ld
+$(FW_VERSION).elf: $(OBJECTS) $(SYS_OBJECTS) $(FW_VERSION).link_script.ld
 	+@echo "link: $(notdir $@)"
-	@$(LD) $(LD_FLAGS) -T $(filter %.ld, $^) $(LIBRARY_PATHS) --output $@ $(filter %.o, $^) $(LIBRARIES) $(LD_SYS_LIBS)
+	$(LD) $(LD_FLAGS) -Wl,-Map=$(FW_VERSION).map -T $(filter %.ld, $^) $(LIBRARY_PATHS) --output $@ $(filter %.o, $^) $(LIBRARIES) $(LD_SYS_LIBS)
 
 $(FW_VERSION).bin: $(FW_VERSION).elf
 	$(ELF2BIN) -O binary $< $@
@@ -347,7 +352,20 @@ $(FW_VERSION).bin: $(FW_VERSION).elf
 $(FW_VERSION).hex: $(FW_VERSION).elf
 	$(ELF2BIN) -O ihex $< $@
 
-.PHONY: all mbed-os
+bootloader.elf: $(BOOT_OBJECTS) $(SYS_OBJECTS)
+	+@echo "link: $(notdir $@)"
+	$(LD) $(LD_FLAGS) -Wl,-Map=bootloader.map -T ../linker/bootloader.ld $(LIBRARY_PATHS) --output $@ $(filter %.o, $^) $(LIBRARIES) $(LD_SYS_LIBS)
+
+bootloader.bin: bootloader.elf
+	$(ELF2BIN) -O binary $< $@
+	+@echo "===== bin file ready to flash: $(OBJDIR)/$@ ====="
+
+full: bootloader.bin $(FW_VERSION).bin
+	+@dd if=/dev/zero bs=1 count=32768 | tr \"\\000\" \"\\377\" > bootloader_pad.bin
+	+@dd if=bootloader.bin of=bootloader_pad.bin conv=notrunc
+	+@cat bootloader_pad.bin $(FW_VERSION).bin > rffe_fw_full.bin
+
+.PHONY: all mbed-os full
 
 # Rules
 ###############################################################################

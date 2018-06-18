@@ -338,7 +338,7 @@ void CLI_Proccess( void )
             arg[i] = strtok_r( NULL, " ", &save_ptr);
         }
         printf("\r\n");
-        if (strcmp( cmd, "dump" ) == 0) {
+        if (strncmp( cmd, "dump", 5 ) == 0) {
             printf("RFFE Vars dump:\n");
             printf("\t[0]  Att: %f\n", get_value64(Att));
             printf("\t[1]  Temperature AC: %f\n", get_value64(TempAC));
@@ -363,7 +363,7 @@ void CLI_Proccess( void )
             printf("\t[20] Gateway-Address: %s\n", Gateway_Addr);
             printf("\t[21] Mask-Address: %s\n", Mask_Addr);
             printf("\n");
-        } else if (strcmp( cmd, "set" ) == 0) {
+        } else if (strncmp( cmd, "set", 4 ) == 0) {
             if ((arg[0] == NULL) || (arg[1] == NULL)) {
                 printf("Command \"set\" used but no arguments given! Type \"help\" to see its correct usage.\n");
                 continue;
@@ -394,7 +394,7 @@ void CLI_Proccess( void )
                 printf("Unknown data type to set!\n");
             }
 
-        } else if ((strcmp( cmd, "help" ) == 0) || (strcmp( cmd, "?" ) == 0) ) {
+        } else if ((strncmp( cmd, "help", 5 ) == 0) || (strncmp( cmd, "?", 2 ) == 0) ) {
             printf("RFFE Firmware help. Available commands:\n");
             printf("\tCMD\t[arg1]\t[arg2]\n");
             printf("\tdump\t\t\tList all variables available and their current status\n");

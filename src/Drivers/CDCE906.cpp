@@ -32,6 +32,8 @@ int CDCE906::cfg_eth( void )
     cfg[24] = 0;    /* Y5 */
     cfg[25] = (3<<4)|0xB;
 
+    err = _write(0, cfg, sizeof(cfg));
+
     return err;
 }
 

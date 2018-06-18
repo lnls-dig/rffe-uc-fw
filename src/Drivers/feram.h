@@ -21,9 +21,13 @@ public:
     int write(uint16_t addr, char *buffer, size_t len);
 
     int get_mac_addr(char *mac_str, char *mac_buf);
+    int set_mac_addr(char *mac_str);
     int get_ip_addr(char *ip_str);
+    int set_ip_addr(char *ip_str);
     int get_mask_addr(char *mask_str);
+    int set_mask_addr(char *mask_str);
     int get_gateway_addr(char *gateway_str);
+    int set_gateway_addr(char *gateway_str);
 private:
     I2C& _i2c;
     mbed::DigitalOut& _wp;

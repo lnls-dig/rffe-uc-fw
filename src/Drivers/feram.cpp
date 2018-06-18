@@ -51,6 +51,18 @@ int FeRAM::get_mac_addr(char *mac_str, char* mac_buf)
     return err;
 }
 
+int FeRAM::set_mac_addr(char *mac_str)
+{
+    int err;
+    uint8_t mac[6] = {0};
+
+    sscanf(mac_str, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+
+    err = FeRAM::write(FERAM_MAC_ADDR_OFFSET, mac, sizeof(mac));
+
+    return err;
+}
+
 int FeRAM::get_ip_addr(char *ip_str)
 {
     int err;
@@ -59,6 +71,15 @@ int FeRAM::get_ip_addr(char *ip_str)
     err = FeRAM::read(FERAM_IP_ADDR_OFFSET, ip, sizeof(ip));
 
     snprintf(ip_str, 16, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+
+int FeRAM::set_ip_addr(char *ip_str)
+{
+    int err;
+    uint8_t ip[4] = {0};
+
+    sscanf(ip_str, "%hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]);
+
+    err = FeRAM::write(FERAM_IP_ADDR_OFFSET, ip, sizeof(ip));
 
     return err;
 }
@@ -75,6 +96,17 @@ int FeRAM::get_mask_addr(char *mask_str)
     return err;
 }
 
+int FeRAM::set_mask_addr(char *mask_str)
+{
+    int err;
+    uint8_t mask[4] = {0};
+
+    sscanf(mask_str,"%hhu.%hhu.%hhu.%hhu", &mask[0], &mask[1], &mask[2], &mask[3]);
+
+    err = FeRAM::write(FERAM_MASK_ADDR_OFFSET, mask, sizeof(mask));
+
+    return err;
+}
 
 int FeRAM::get_gateway_addr(char *gateway_str)
 {
@@ -84,6 +116,18 @@ int FeRAM::get_gateway_addr(char *gateway_str)
     err = FeRAM::read(FERAM_GATEWAY_ADDR_OFFSET, gateway, sizeof(gateway));
 
     snprintf(gateway_str, 16, "%d.%d.%d.%d", gateway[0], gateway[1], gateway[2], gateway[3]);
+
+    return err;
+}
+
+int FeRAM::set_gateway_addr(char *gateway_str)
+{
+    int err;
+    uint8_t gateway[4] = {0};
+
+    sscanf(gateway_str, "%hhu.%hhu.%hhu.%hhu", &gateway[0], &gateway[1], &gateway[2], &gateway[3]);
+
+    err = FeRAM::write(FERAM_GATEWAY_ADDR_OFFSET, gateway, sizeof(gateway));
 
     return err;
 }

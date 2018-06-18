@@ -4,6 +4,11 @@
 #include "mbed.h"
 #include "rtos.h"
 
+#define FERAM_MAC_ADDR_OFFSET     0
+#define FERAM_IP_ADDR_OFFSET      0x10
+#define FERAM_MASK_ADDR_OFFSET    0x20
+#define FERAM_GATEWAY_ADDR_OFFSET 0x30
+
 class FeRAM
 {
 public:

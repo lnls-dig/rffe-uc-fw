@@ -17,8 +17,8 @@ public:
     : _i2c(i2c), _wp(wp), _sladdr(sladdr) {
     }
 
-    int read(uint16_t addr, char *buffer, size_t len); /* 11bit address */
-    int write(uint16_t addr, char *buffer, size_t len);
+    int read(uint16_t addr, uint8_t *buffer, size_t len); /* 11bit address */
+    int write(uint16_t addr, uint8_t *buffer, size_t len);
 
     int get_mac_addr(char *mac_str, char *mac_buf);
     int set_mac_addr(char *mac_str);

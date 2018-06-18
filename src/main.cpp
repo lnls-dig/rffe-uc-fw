@@ -82,26 +82,28 @@ extern "C" void mbed_mac_address(char *s) {
 /* The index in this table will coincide with the index on the server list, since it registrates the variables sequentially */
 
 struct bsmp_var rffe_vars[] = {
-    RFFE_VAR( Att,            READ_WRITE ), // Attenuators
-    RFFE_VAR( TempAC,         READ_ONLY ), // TempAC
-    RFFE_VAR( TempBD,         READ_ONLY ), // TempBD
-    RFFE_VAR( Set_PointAC,    READ_WRITE ), // Set_PointAC
-    RFFE_VAR( Set_PointBD,    READ_WRITE ), // Set_PointBD
-    RFFE_VAR( Temp_Control,   READ_WRITE ), // Temp_Control
-    RFFE_VAR( HeaterAC,       READ_WRITE ), // HeaterAC
-    RFFE_VAR( HeaterBD,       READ_WRITE ), // HeaterBD
-    RFFE_VAR( Reset,          READ_WRITE ), // Reset
-    RFFE_VAR( Reprogramming,  READ_WRITE ), // Reprogramming
-    RFFE_VAR( Data,           READ_WRITE ), // Data
-    RFFE_VAR( Version,        READ_ONLY ), // Version
-    RFFE_VAR( PID_AC_Kc,      READ_WRITE ), // PID_AC_Kc
-    RFFE_VAR( PID_AC_tauI,    READ_WRITE ), // PID_AC_tauI
-    RFFE_VAR( PID_AC_tauD,    READ_WRITE ), // PID_AC_tauD
-    RFFE_VAR( PID_BD_Kc,      READ_WRITE ), // PID_BD_Kc
-    RFFE_VAR( PID_BD_tauI,    READ_WRITE ), // PID_BD_tauI
-    RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
-    RFFE_VAR( IP_Addr,        READ_WRITE ), // Ip Address
-    RFFE_VAR( MAC_Addr,       READ_WRITE ), // MAC Address
+    /* [0] = */  RFFE_VAR( Att,            READ_WRITE ), // Attenuators
+    /* [1] = */  RFFE_VAR( TempAC,         READ_ONLY ), // TempAC
+    /* [2] = */  RFFE_VAR( TempBD,         READ_ONLY ), // TempBD
+    /* [3] = */  RFFE_VAR( Set_PointAC,    READ_WRITE ), // Set_PointAC
+    /* [4] = */  RFFE_VAR( Set_PointBD,    READ_WRITE ), // Set_PointBD
+    /* [5] = */  RFFE_VAR( Temp_Control,   READ_WRITE ), // Temp_Control
+    /* [6] = */  RFFE_VAR( HeaterAC,       READ_WRITE ), // HeaterAC
+    /* [7] = */  RFFE_VAR( HeaterBD,       READ_WRITE ), // HeaterBD
+    /* [8] = */  RFFE_VAR( Reset,          READ_WRITE ), // Reset
+    /* [9] = */  RFFE_VAR( Reprogramming,  READ_WRITE ), // Reprogramming
+    /* [10] = */ RFFE_VAR( Data,           READ_WRITE ), // Data
+    /* [11] = */ RFFE_VAR( Version,        READ_ONLY ), // Version
+    /* [12] = */ RFFE_VAR( PID_AC_Kc,      READ_WRITE ), // PID_AC_Kc
+    /* [13] = */ RFFE_VAR( PID_AC_tauI,    READ_WRITE ), // PID_AC_tauI
+    /* [14] = */ RFFE_VAR( PID_AC_tauD,    READ_WRITE ), // PID_AC_tauD
+    /* [15] = */ RFFE_VAR( PID_BD_Kc,      READ_WRITE ), // PID_BD_Kc
+    /* [16] = */ RFFE_VAR( PID_BD_tauI,    READ_WRITE ), // PID_BD_tauI
+    /* [17] = */ RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
+    /* [18] = */ RFFE_VAR( IP_Addr,        READ_WRITE ), // Ip Address
+    /* [19] = */ RFFE_VAR( MAC_Addr,       READ_WRITE ), // MAC Address
+    /* [20] = */ RFFE_VAR( Gateway_Addr,   READ_WRITE ), // Gateway Address
+    /* [21] = */ RFFE_VAR( Mask_Addr,      READ_WRITE ), // Mask Address
 };
 
 /* BSMP server */
@@ -358,6 +360,8 @@ void CLI_Proccess( void )
             printf("\t[17] PID_BD_tauD: %f\n", get_value64(PID_BD_tauD));
             printf("\t[18] IP-Address: %s\n", IP_Addr);
             printf("\t[19] MAC-Address: %s\n", MAC_Addr);
+            printf("\t[20] Gateway-Address: %s\n", Gateway_Addr);
+            printf("\t[21] Mask-Address: %s\n", Mask_Addr);
             printf("\n");
         } else if (strcmp( cmd, "set" ) == 0) {
             if ((arg[0] == NULL) || (arg[1] == NULL)) {
@@ -411,9 +415,37 @@ void bsmp_hook_signal_threads(enum bsmp_operation op, struct bsmp_var **list)
 
     for (i = 0; list[i] != NULL; i++) {
         var = list[i];
-        if (var->info.id == 0) {
-            // Attenuator value changed
+        /* Special cases */
+        switch( var->info.id ) {
+        case 0:
+            /* Attenuators */
             Attenuators_thread.signal_set(0x01);
+            break;
+        case 8:
+            /* Reset */
+            printf("Resetting MBED...\n");
+            mbed_reset();
+            break;
+        case 18:
+            /* IP Address */
+            printf("Updating IP address on FeRAM to %s ...\n\r", IP_Addr);
+            feram.set_ip_addr(IP_Addr);
+            break;
+        case 19:
+            /* MAC Address */
+            printf("Updating MAC address on FeRAM to %s ...\n\r", MAC_Addr);
+            feram.set_mac_addr(MAC_Addr);
+            break;
+        case 20:
+            /* Gateway Address */
+            printf("Updating Gateway address on FeRAM to %s ...\n\r", Gateway_Addr);
+            feram.set_gateway_addr(Gateway_Addr);
+            break;
+        case 21:
+            /* Mask Address */
+            printf("Updating Mask address on FeRAM to %s ...\n\r", Mask_Addr);
+            feram.set_mask_addr(Mask_Addr);
+            break;
         }
     }
 }

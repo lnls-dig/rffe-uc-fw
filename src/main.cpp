@@ -106,13 +106,22 @@ struct bsmp_var rffe_vars[] = {
     /* [21] = */ RFFE_VAR( Mask_Addr,      READ_WRITE ), // Mask Address
 };
 
+typedef struct {
+    struct bsmp_raw_packet msg;
+    Mail<struct bsmp_raw_packet, 5> *response_mail_box;
+} bsmp_mail_t;
+
+Mail<bsmp_mail_t, 5> bsmp_mail_box;
+Mail<struct bsmp_raw_packet, 5> eth_mail_box;
+
 /* BSMP server */
 bsmp_server_t *bsmp;
 
 // Threads
 Thread Temp_Control_thread(osPriorityNormal, 1200, NULL, "TEMP");
 Thread Attenuators_thread(osPriorityNormal, 800, NULL, "ATT");
-Thread CLI_Proccess_Thread(osPriorityNormal, 1200, NULL, "CLI");
+Thread CLI_Proccess_Thread(osPriorityNormal, 1280, NULL, "CLI");
+Thread BSMP_Thread(osPriorityNormal, 800, NULL, "BSMP");
 
 // Hardware Initialization - MBED
 
@@ -478,6 +487,38 @@ void bsmp_hook_signal_threads(enum bsmp_operation op, struct bsmp_var **list)
     }
 }
 
+void bsmp_dispatcher( void )
+{
+    struct bsmp_raw_packet mock_response;
+
+    while(1) {
+        /*  Wait for a new message */
+        osEvent evt = bsmp_mail_box.get();
+
+        if (evt.status != osEventMail) {
+            /* Quietly ignore errors for now */
+            continue;
+        }
+
+        bsmp_mail_t *mail = (bsmp_mail_t*)evt.value.p;
+
+        mock_response.data = (uint8_t *) malloc(sizeof(uint8_t)*30);
+
+        /* Proccess BSMP request */
+        bsmp_process_packet(bsmp, &mail->msg, &mock_response);
+
+        /* Only respond if there's a valid mailbox to put the response in */
+        if (mail->response_mail_box) {
+            struct bsmp_raw_packet *response = mail->response_mail_box->alloc();
+            response->data = mock_response.data;
+            response->len = mock_response.len;
+            mail->response_mail_box->put(response);
+        }
+
+        bsmp_mail_box.free(mail);
+    }
+}
+
 int main( void )
 {
     //Init serial port for info printf
@@ -547,6 +588,7 @@ int main( void )
     Attenuators_thread.start(Attenuators_Control);
     Temp_Control_thread.start(Temp_Feedback_Control);
     CLI_Proccess_Thread.start(CLI_Proccess);
+    BSMP_Thread.start(bsmp_dispatcher);
 
     // Instantiate our command processor for the  USB serial line.
     scMake(&pc, commandCallback, NULL);
@@ -560,10 +602,7 @@ int main( void )
     bool full_page = false;
     uint8_t v_major = 0, v_minor = 0, v_patch = 0;
 
-    struct bsmp_raw_packet request;
-    struct bsmp_raw_packet response;
     uint8_t buf[BUFSIZE];
-    uint8_t bufresponse[BUFSIZE];
 
     led4 = !pll.cfg_eth();
 
@@ -641,22 +680,34 @@ int main( void )
                 }
                 printf("\n");
 #endif
-                request.data = buf;
-                request.len = recv_sz;
+                bsmp_mail_t *mail = bsmp_mail_box.alloc();
 
-                response.data = bufresponse;
+                mail->response_mail_box = &eth_mail_box;
+                mail->msg.data = buf;
+                mail->msg.len = recv_sz;
 
-                bsmp_process_packet(bsmp, &request, &response);
+                bsmp_mail_box.put(mail);
 
-                sent_sz = client.send((char*)response.data, response.len);
+                osEvent evt = eth_mail_box.get();
+
+                if (evt.status != osEventMail) {
+                    /* Quietly ignore errors for now */
+                    continue;
+                }
+
+                struct bsmp_raw_packet *response_mail = (struct bsmp_raw_packet *)evt.value.p;
+
+                sent_sz = client.send((char*)response_mail->data, response_mail->len);
 
 #ifdef DEBUG_PRINTF
                 printf("Sending message of %d bytes: ", sent_sz);
                 for (int i = 0; i < sent_sz; i++) {
-                    printf("0x%X ",response.data[i]);
+                    printf("0x%X ",response_mail->data[i]);
                 }
                 printf("\n");
 #endif
+                free(response_mail->data);
+                eth_mail_box.free(response_mail);
 
                 if (sent_sz <= 0) {
                     printf("ERROR while writing to socket!\n");

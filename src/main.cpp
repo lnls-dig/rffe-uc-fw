@@ -336,6 +336,7 @@ void CLI_Proccess( void )
 {
     char *cmd, *save_ptr;
     char *arg[2];
+    uint8_t msg_buffer[50] = {0};
 
     printf("Initializing CLI_Proccess thread\n");
 
@@ -384,52 +385,48 @@ void CLI_Proccess( void )
                 continue;
             }
 
-            if (rffe_vars[var_index].info.size == sizeof(int)){
+            bsmp_mail_t *mail = bsmp_mail_box.alloc();
+
+            mail->response_mail_box = NULL;
+            mail->msg.data = msg_buffer;
+            mail->msg.data[0] = 0x20; /* CMD_VAR_WRITE */
+            mail->msg.data[3] = var_index; /* Payload[0]: Var id */
+
+            uint16_t payload_size = 0;
+
+            switch(rffe_vars[var_index].info.size) {
+            case sizeof(int):
+            {
                 int arg_int = strtol( arg[1], NULL, 10);
-                set_value( (int *)rffe_vars[var_index].data, arg_int);
-            } else if ( (rffe_vars[var_index].info.size == sizeof(double)) ) {
+                memcpy(&(mail->msg.data[4]), &arg_int, sizeof(arg_int));
+                payload_size = sizeof(int);
+                break;
+            }
+            case sizeof(double):
+            {
                 double arg_dbl = strtod( arg[1], NULL);
-                set_value( (double *)rffe_vars[var_index].data, arg_dbl);
-            } else if ( (rffe_vars[var_index].info.size == sizeof(uint8_t)) ) {
-                uint8_t arg_dbl = strtoul( arg[1], NULL, 10);
-                set_value( (uint8_t *)rffe_vars[var_index].data, arg_dbl);
-            } else {
-                /* Assume it's a string */
-                strcpy((char *) rffe_vars[var_index].data, arg[1]);
+                memcpy(&(mail->msg.data[4]), &arg_dbl, sizeof(arg_dbl));
+                payload_size = sizeof(double);
+                break;
+            }
+            case sizeof(uint8_t):
+            {
+                uint8_t arg_byte = strtoul( arg[1], NULL, 10);
+                memcpy(&(mail->msg.data[4]), &arg_byte, sizeof(arg_byte));
+                payload_size = sizeof(uint8_t);
+                break;
+            }
+            default:
+                strncpy((char *)&(mail->msg.data[4]), arg[1], rffe_vars[var_index].info.size);
+                payload_size = (strlen(arg[1]) < rffe_vars[var_index].info.size) ? strlen(arg[1]) : rffe_vars[var_index].info.size;
             }
 
-            /* Special cases */
-            switch( var_index ) {
-            case 0:
-                /* Attenuators */
-                Attenuators_thread.signal_set(0x01);
-                break;
-            case 8:
-                /* Reset */
-                printf("Resetting MBED...\n");
-                mbed_reset();
-                break;
-            case 18:
-                /* IP Address */
-                printf("Updating IP address on FeRAM to %s ...\n\r", IP_Addr);
-                feram.set_ip_addr(IP_Addr);
-                break;
-            case 19:
-                /* MAC Address */
-                printf("Updating MAC address on FeRAM to %s ...\n\r", MAC_Addr);
-                feram.set_mac_addr(MAC_Addr);
-                break;
-            case 20:
-                /* Gateway Address */
-                printf("Updating Gateway address on FeRAM to %s ...\n\r", Gateway_Addr);
-                feram.set_gateway_addr(Gateway_Addr);
-                break;
-            case 21:
-                /* Mask Address */
-                printf("Updating Mask address on FeRAM to %s ...\n\r", Mask_Addr);
-                feram.set_mask_addr(Mask_Addr);
-                break;
-            }
+            payload_size++; /* Var id counts as payload */
+            mail->msg.data[1] = (payload_size >> 8) & 0xFF; /* Payload size >> 8 */
+            mail->msg.data[2] = payload_size & 0xFF; /* Payload size */
+            mail->msg.len = payload_size + 3;
+
+            bsmp_mail_box.put(mail);
 
         } else if ((strncmp( cmd, "help", 5 ) == 0) || (strncmp( cmd, "?", 2 ) == 0) ) {
             printf("RFFE Firmware help. Available commands:\n");

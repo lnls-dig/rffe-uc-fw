@@ -21,6 +21,7 @@
 */
 
 #include "cli.h"
+#include "ctype.h"
 
 struct SCMD *sc_listeners[SCMD_MAX_LISTENERS]; // set up to support upto 10 listeners
 
@@ -120,6 +121,10 @@ void sc_rx_process(struct SCMD *wrk) {
             wrk->buff[0] = 0; // add null terminator
             break;
         default:
+            /* Check if input char is printable (valid) */
+            if (!isprint(cin)) {
+                break;
+            }
             /* Echo back */
             wrk->sio->putc(cin);
             /* Add character to the buffer */

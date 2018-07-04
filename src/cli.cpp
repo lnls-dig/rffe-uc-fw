@@ -89,6 +89,7 @@ struct SCMD *scMake(RawSerial *sio, void (*callback)(char *, void *), void *call
     sc->callbackExtra = callbackExtra;
     sc_add_listener(sc);
     sc->sio->attach(&sc_rx_interrupt, RawSerial::RxIrq);
+    sc->in_ndx = 0;
     return sc;
 }
 

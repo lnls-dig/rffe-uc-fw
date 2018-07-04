@@ -120,6 +120,20 @@ void sc_rx_process(struct SCMD *wrk) {
             wrk->in_ndx = 0;  // reset for next cycle;
             wrk->buff[0] = 0; // add null terminator
             break;
+
+            /* Backspace */
+        case 8:
+                /* Print a space over the last char and rewind the cursor */
+                wrk->sio->putc(cin);
+                wrk->sio->putc(' ');
+                wrk->sio->putc(cin);
+                if ( wrk->in_ndx > 0 ) {
+                    wrk->in_ndx--;
+                }
+                wrk->buff[wrk->in_ndx] = 0;
+
+            break;
+
         default:
             /* Check if input char is printable (valid) */
             if (!isprint(cin)) {

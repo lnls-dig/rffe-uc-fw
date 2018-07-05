@@ -120,7 +120,7 @@ bsmp_server_t *bsmp;
 // Threads
 Thread Temp_Control_thread(osPriorityNormal, 1200, NULL, "TEMP");
 Thread Attenuators_thread(osPriorityNormal, 800, NULL, "ATT");
-Thread CLI_Proccess_Thread(osPriorityNormal, 1280, NULL, "CLI");
+Thread CLI_Proccess_Thread(osPriorityNormal, 1024, NULL, "CLI");
 Thread BSMP_Thread(osPriorityNormal, 800, NULL, "BSMP");
 
 // Hardware Initialization - MBED
@@ -336,7 +336,7 @@ void CLI_Proccess( void )
 {
     char *cmd, *save_ptr;
     char *arg[2];
-    uint8_t msg_buffer[50] = {0};
+    uint8_t msg_buffer[30] = {0};
 
     printf("Initializing CLI_Proccess thread\n");
 

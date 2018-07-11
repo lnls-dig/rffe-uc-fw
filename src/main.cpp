@@ -38,7 +38,7 @@ extern "C" {
 #define FILE_DATASIZE   128
 
 /* Firmware version macros */
-#define FW_VERSION      "V1_0_0"
+#define FW_VERSION      "V1_1_0"
 
 // BSMP Variables arrays
 double Att[1];

@@ -418,7 +418,7 @@ void CLI_Proccess( void )
             }
             default:
                 strncpy((char *)&(mail->msg.data[4]), arg[1], rffe_vars[var_index].info.size);
-                payload_size = (strlen(arg[1]) < rffe_vars[var_index].info.size) ? strlen(arg[1]) : rffe_vars[var_index].info.size;
+                payload_size = rffe_vars[var_index].info.size;
             }
 
             payload_size++; /* Var id counts as payload */

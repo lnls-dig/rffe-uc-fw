@@ -385,6 +385,8 @@ void CLI_Proccess( void )
                 continue;
             }
 
+            /* Clear request msg buffer */
+            memset(msg_buffer, 0, sizeof(msg_buffer));
             bsmp_mail_t *mail = bsmp_mail_box.alloc();
 
             mail->response_mail_box = NULL;

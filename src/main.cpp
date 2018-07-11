@@ -5,6 +5,7 @@
 #include "TCPServer.h"
 #include "TCPSocket.h"
 #include "lpc_phy.h"
+#include "watchdog.h"
 
 /* IAP includes */
 #include "boot.h"
@@ -39,9 +40,14 @@ extern "C" {
 /* Firmware version macros */
 #define FW_VERSION      "V1_0_0"
 
+// Setup the watchdog timer
+Watchdog wdt;
+
 /* MBED Reset function */
 void mbed_reset( void ) {
-    NVIC_SystemReset();
+    wdt.kick(0.1);
+    /* Lock the firmware and wait for the overflow */
+    while(1);
 }
 
 // BSMP Variables arrays
@@ -387,6 +393,7 @@ void CLI_Proccess( void )
 
             /* Clear request msg buffer */
             memset(msg_buffer, 0, sizeof(msg_buffer));
+
             bsmp_mail_t *mail = bsmp_mail_box.alloc();
 
             mail->response_mail_box = NULL;
@@ -520,6 +527,8 @@ void bsmp_dispatcher( void )
 
 int main( void )
 {
+    wdt.clear_overflow_flag();
+
     //Init serial port for info printf
     pc.baud(115200);
 

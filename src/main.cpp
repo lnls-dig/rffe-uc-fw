@@ -40,16 +40,6 @@ extern "C" {
 /* Firmware version macros */
 #define FW_VERSION      "V1_0_0"
 
-// Setup the watchdog timer
-Watchdog wdt;
-
-/* MBED Reset function */
-void mbed_reset( void ) {
-    wdt.kick(0.1);
-    /* Lock the firmware and wait for the overflow */
-    while(1);
-}
-
 // BSMP Variables arrays
 double Att[1];
 double TempAC[1];
@@ -75,11 +65,6 @@ char Gateway_Addr[16];
 char MAC_Addr[18];
 
 char mac_buffer[6];
-
-extern "C" void mbed_mac_address(char *s) {
-    // Write your code to get the MAC address from the 25AA02E48 into mac[6]
-    memcpy(s, mac_buffer, 6);
-}
 
 #define READ_ONLY  0
 #define READ_WRITE 1
@@ -120,6 +105,9 @@ typedef struct {
 Mail<bsmp_mail_t, 5> bsmp_mail_box;
 Mail<struct bsmp_raw_packet, 5> eth_mail_box;
 
+/* Setup the watchdog timer */
+Watchdog wdt;
+
 /* BSMP server */
 bsmp_server_t *bsmp;
 
@@ -158,6 +146,20 @@ CDCE906 pll(pll_i2c, 0b11010010);
 I2C feram_i2c(P0_19, P0_20);
 DigitalOut feram_wp(P0_21);
 FeRAM feram(feram_i2c, feram_wp);
+
+/* MBED functions replacements */
+extern "C" void mbed_mac_address(char *s)
+{
+    memcpy(s, mac_buffer, 6);
+}
+
+/* MBED Reset function */
+void mbed_reset( void )
+{
+    wdt.kick(0.1);
+    /* Lock the firmware and wait for the overflow */
+    while(1);
+}
 
 bool get_eth_link_status(void)
 {

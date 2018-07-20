@@ -21,6 +21,7 @@
 */
 
 #include "cli.h"
+#include "ctype.h"
 
 struct SCMD *sc_listeners[SCMD_MAX_LISTENERS]; // set up to support upto 10 listeners
 
@@ -89,6 +90,7 @@ struct SCMD *scMake(RawSerial *sio, void (*callback)(char *, void *), void *call
     sc->callbackExtra = callbackExtra;
     sc_add_listener(sc);
     sc->sio->attach(&sc_rx_interrupt, RawSerial::RxIrq);
+    sc->in_ndx = 0;
     return sc;
 }
 
@@ -104,8 +106,12 @@ void sc_rx_process(struct SCMD *wrk) {
 
     while ((wrk->sio->readable())) {
         char cin = wrk->sio->getc();
-        wrk->sio->putc(cin);
-        if ((cin == 10) || (cin == 13)) { // found CR or LF
+
+        switch (cin) {
+
+            /* Carriage Return or Line Feed (CRLF) */
+        case 10:
+        case 13:
             if (wrk->in_ndx > 0) {
                 // commands must be at least 1 byte long
                 wrk->buff[wrk->in_ndx] = 0;    // add terminating null
@@ -113,23 +119,43 @@ void sc_rx_process(struct SCMD *wrk) {
             }
             wrk->in_ndx = 0;  // reset for next cycle;
             wrk->buff[0] = 0; // add null terminator
-        }
-        else {
-            // not a CR or LF so must be a valid character
-            wrk->buff[wrk->in_ndx] = cin; // add character to the buffer
-            wrk->buff[wrk->in_ndx + 1] = 0; // add null terminator just in case
+            break;
+
+            /* Backspace */
+        case 8:
+                /* Print a space over the last char and rewind the cursor */
+                wrk->sio->putc(cin);
+                wrk->sio->putc(' ');
+                wrk->sio->putc(cin);
+                if ( wrk->in_ndx > 0 ) {
+                    wrk->in_ndx--;
+                }
+                wrk->buff[wrk->in_ndx] = 0;
+
+            break;
+
+        default:
+            /* Check if input char is printable (valid) */
+            if (!isprint(cin)) {
+                break;
+            }
+            /* Echo back */
+            wrk->sio->putc(cin);
+            /* Add character to the buffer */
+            wrk->buff[wrk->in_ndx] = cin;
+            /* Add null terminator just in case */
+            wrk->buff[wrk->in_ndx + 1] = 0;
             wrk->in_ndx++;
-            //printf("wrk->buff=%s in_ndx=%d\n", wrk->buff, wrk->in_ndx);
+
             if (wrk->in_ndx >= SCMD_MAX_CMD_LEN) {
-                // buffer is full so treat as command
+                /* Buffer is full so treat as command */
                 wrk->callback(wrk->buff, wrk->callbackExtra);
                 wrk->buff[0] = 0;
                 wrk->in_ndx = 0;
-                // add callback here
             }
+            break;
         }
     }
-    return;
 }
 
 // Process all characters available in all the

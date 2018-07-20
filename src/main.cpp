@@ -5,6 +5,7 @@
 #include "TCPServer.h"
 #include "TCPSocket.h"
 #include "lpc_phy.h"
+#include "watchdog.h"
 
 /* IAP includes */
 #include "boot.h"
@@ -37,12 +38,7 @@ extern "C" {
 #define FILE_DATASIZE   128
 
 /* Firmware version macros */
-#define FW_VERSION      "V1_0_0"
-
-/* MBED Reset function */
-void mbed_reset( void ) {
-    NVIC_SystemReset();
-}
+#define FW_VERSION      "V1_1_0"
 
 // BSMP Variables arrays
 double Att[1];
@@ -68,6 +64,8 @@ char Mask_Addr[16];
 char Gateway_Addr[16];
 char MAC_Addr[18];
 
+char mac_buffer[6];
+
 #define READ_ONLY  0
 #define READ_WRITE 1
 
@@ -75,27 +73,40 @@ char MAC_Addr[18];
 /* The index in this table will coincide with the index on the server list, since it registrates the variables sequentially */
 
 struct bsmp_var rffe_vars[] = {
-    RFFE_VAR( Att,            READ_WRITE ), // Attenuators
-    RFFE_VAR( TempAC,         READ_ONLY ), // TempAC
-    RFFE_VAR( TempBD,         READ_ONLY ), // TempBD
-    RFFE_VAR( Set_PointAC,    READ_WRITE ), // Set_PointAC
-    RFFE_VAR( Set_PointBD,    READ_WRITE ), // Set_PointBD
-    RFFE_VAR( Temp_Control,   READ_WRITE ), // Temp_Control
-    RFFE_VAR( HeaterAC,       READ_WRITE ), // HeaterAC
-    RFFE_VAR( HeaterBD,       READ_WRITE ), // HeaterBD
-    RFFE_VAR( Reset,          READ_WRITE ), // Reset
-    RFFE_VAR( Reprogramming,  READ_WRITE ), // Reprogramming
-    RFFE_VAR( Data,           READ_WRITE ), // Data
-    RFFE_VAR( Version,        READ_ONLY ), // Version
-    RFFE_VAR( PID_AC_Kc,      READ_WRITE ), // PID_AC_Kc
-    RFFE_VAR( PID_AC_tauI,    READ_WRITE ), // PID_AC_tauI
-    RFFE_VAR( PID_AC_tauD,    READ_WRITE ), // PID_AC_tauD
-    RFFE_VAR( PID_BD_Kc,      READ_WRITE ), // PID_BD_Kc
-    RFFE_VAR( PID_BD_tauI,    READ_WRITE ), // PID_BD_tauI
-    RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
-    RFFE_VAR( IP_Addr,        READ_WRITE ), // Ip Address
-    RFFE_VAR( MAC_Addr,       READ_WRITE ), // MAC Address
+    /* [0] = */  RFFE_VAR( Att,            READ_WRITE ), // Attenuators
+    /* [1] = */  RFFE_VAR( TempAC,         READ_ONLY ), // TempAC
+    /* [2] = */  RFFE_VAR( TempBD,         READ_ONLY ), // TempBD
+    /* [3] = */  RFFE_VAR( Set_PointAC,    READ_WRITE ), // Set_PointAC
+    /* [4] = */  RFFE_VAR( Set_PointBD,    READ_WRITE ), // Set_PointBD
+    /* [5] = */  RFFE_VAR( Temp_Control,   READ_WRITE ), // Temp_Control
+    /* [6] = */  RFFE_VAR( HeaterAC,       READ_WRITE ), // HeaterAC
+    /* [7] = */  RFFE_VAR( HeaterBD,       READ_WRITE ), // HeaterBD
+    /* [8] = */  RFFE_VAR( Reset,          READ_WRITE ), // Reset
+    /* [9] = */  RFFE_VAR( Reprogramming,  READ_WRITE ), // Reprogramming
+    /* [10] = */ RFFE_VAR( Data,           READ_WRITE ), // Data
+    /* [11] = */ RFFE_VAR( Version,        READ_ONLY ), // Version
+    /* [12] = */ RFFE_VAR( PID_AC_Kc,      READ_WRITE ), // PID_AC_Kc
+    /* [13] = */ RFFE_VAR( PID_AC_tauI,    READ_WRITE ), // PID_AC_tauI
+    /* [14] = */ RFFE_VAR( PID_AC_tauD,    READ_WRITE ), // PID_AC_tauD
+    /* [15] = */ RFFE_VAR( PID_BD_Kc,      READ_WRITE ), // PID_BD_Kc
+    /* [16] = */ RFFE_VAR( PID_BD_tauI,    READ_WRITE ), // PID_BD_tauI
+    /* [17] = */ RFFE_VAR( PID_BD_tauD,    READ_WRITE ), // PID_BD_tauD
+    /* [18] = */ RFFE_VAR( IP_Addr,        READ_WRITE ), // Ip Address
+    /* [19] = */ RFFE_VAR( MAC_Addr,       READ_WRITE ), // MAC Address
+    /* [20] = */ RFFE_VAR( Gateway_Addr,   READ_WRITE ), // Gateway Address
+    /* [21] = */ RFFE_VAR( Mask_Addr,      READ_WRITE ), // Mask Address
 };
+
+typedef struct {
+    struct bsmp_raw_packet msg;
+    Mail<struct bsmp_raw_packet, 5> *response_mail_box;
+} bsmp_mail_t;
+
+Mail<bsmp_mail_t, 5> bsmp_mail_box;
+Mail<struct bsmp_raw_packet, 5> eth_mail_box;
+
+/* Setup the watchdog timer */
+Watchdog wdt;
 
 /* BSMP server */
 bsmp_server_t *bsmp;
@@ -104,6 +115,7 @@ bsmp_server_t *bsmp;
 Thread Temp_Control_thread(osPriorityNormal, 1200, NULL, "TEMP");
 Thread Attenuators_thread(osPriorityNormal, 800, NULL, "ATT");
 Thread CLI_Proccess_Thread(osPriorityNormal, 1024, NULL, "CLI");
+Thread BSMP_Thread(osPriorityNormal, 800, NULL, "BSMP");
 
 // Hardware Initialization - MBED
 
@@ -129,9 +141,25 @@ DigitalOut CS_dac(P0_24); // Chip select for DAC. LVTTL, low = Selected, init = 
 RawSerial pc(P0_2, P0_3); // Serial USB port. (NOTE: All printf() calls are redirected to this port)
 SPI spi1(P0_9,P0_8,P0_7); //SPI Interface - spi(mosi, miso, sclk)
 
+I2C pll_i2c(P0_27, P0_28);
+CDCE906 pll(pll_i2c, 0b11010010);
 I2C feram_i2c(P0_19, P0_20);
 DigitalOut feram_wp(P0_21);
 FeRAM feram(feram_i2c, feram_wp);
+
+/* MBED functions replacements */
+extern "C" void mbed_mac_address(char *s)
+{
+    memcpy(s, mac_buffer, 6);
+}
+
+/* MBED Reset function */
+void mbed_reset( void )
+{
+    wdt.kick(0.1);
+    /* Lock the firmware and wait for the overflow */
+    while(1);
+}
 
 bool get_eth_link_status(void)
 {
@@ -166,7 +194,7 @@ void Temp_Feedback_Control( void )
     int state = 2;
     int pid_state = MANUAL;
 
-    printf("Initializing Temp Control thread\n");
+    printf("Initializing Temp Control thread\n\r");
 
     /* Create PIDs with generic tuning constants (they will be updated as soon as the control loop starts) */
     pidAC.SetSampleTime( PID_RATE*1000 );
@@ -183,7 +211,7 @@ void Temp_Feedback_Control( void )
 
     while (1) {
         if (state != get_value8(Temp_Control)) {
-            printf ("Temperature control in %s mode!\n", (get_value8(Temp_Control) == AUTOMATIC) ? "AUTOMATIC":"MANUAL");
+            printf ("Temperature control in %s mode!\n\r", (get_value8(Temp_Control) == AUTOMATIC) ? "AUTOMATIC":"MANUAL");
             state = get_value8(Temp_Control);
 
             pid_state = (state != MANUAL) ? AUTOMATIC : MANUAL;
@@ -205,12 +233,12 @@ void Temp_Feedback_Control( void )
         SetP_BD = get_value64(Set_PointBD);
 
 #ifdef DEBUG_PRINTF
-        printf( "AC_Temp = %f \n", ProcessValueAC );
-        printf( "BD_Temp = %f \n", ProcessValueBD );
-        printf( "PID_AC Params:\n");
-        printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", get_value64(PID_AC_Kc), get_value64(PID_AC_tauI), get_value64(PID_AC_tauD));
-        printf( "PID_BD Params:\n");
-        printf( "\tKc:%f\ttauI:%f\ttauD:%f\n", get_value64(PID_BD_Kc), get_value64(PID_BD_tauI), get_value64(PID_BD_tauD));
+        printf( "AC_Temp = %f \n\r", ProcessValueAC );
+        printf( "BD_Temp = %f \n\r", ProcessValueBD );
+        printf( "PID_AC Params:\n\r");
+        printf( "\tKc:%f\ttauI:%f\ttauD:%f\n\r", get_value64(PID_AC_Kc), get_value64(PID_AC_tauI), get_value64(PID_AC_tauD));
+        printf( "PID_BD Params:\n\r");
+        printf( "\tKc:%f\ttauI:%f\ttauD:%f\n\r", get_value64(PID_BD_Kc), get_value64(PID_BD_tauI), get_value64(PID_BD_tauD));
 #endif
 
         // Update PID tuning values
@@ -252,7 +280,7 @@ void Temp_Feedback_Control( void )
         BD_Heater_DAC.Write( voutBD );
 
 #ifdef DEBUG_PRINTF
-        printf("Heater output AC: %f \t BD: %f\n", voutAC, voutBD);
+        printf("Heater output AC: %f \t BD: %f\n\r", voutAC, voutBD);
 #endif
         Thread::wait(100);
     }
@@ -263,7 +291,7 @@ void Attenuators_Control( void )
     double prev_att1 = 0;
     bool attVec1[6];
 
-    printf("Initializing Attenuators thread\n");
+    printf("Initializing Attenuators thread\n\r");
 
     while (1) {
         // Attenuators set
@@ -272,7 +300,7 @@ void Attenuators_Control( void )
             // Checking and setting attenuators value to fisable values
             set_value(Att,(float)(int(get_value64(Att)*2))/2);
 #ifdef DEBUG_PRINTF
-            printf("\nAtt values updated from: %f to %f\n", prev_att1, get_value64(Att));
+            printf("\n\rAtt values updated from: %f to %f\n\r", prev_att1, get_value64(Att));
 #endif
             // Updating previous values
             prev_att1 = get_value64(Att);
@@ -316,8 +344,9 @@ void CLI_Proccess( void )
 {
     char *cmd, *save_ptr;
     char *arg[2];
+    uint8_t msg_buffer[30] = {0};
 
-    printf("Initializing CLI_Proccess thread\n");
+    printf("Initializing CLI_Proccess thread\n\r");
 
     for( ; ; ) {
         Thread::signal_wait(0x01);
@@ -327,68 +356,97 @@ void CLI_Proccess( void )
             arg[i] = strtok_r( NULL, " ", &save_ptr);
         }
         printf("\r\n");
-        if (strcmp( cmd, "dump" ) == 0) {
-            printf("RFFE Vars dump:\n");
-            printf("\t[0]  Att: %f\n", get_value64(Att));
-            printf("\t[1]  Temperature AC: %f\n", get_value64(TempAC));
-            printf("\t[2]  Temperature BD: %f\n", get_value64(TempBD));
-            printf("\t[3]  Set PointAC: %f\n", get_value64(Set_PointAC));
-            printf("\t[4]  Set PointBD: %f\n", get_value64(Set_PointBD));
-            printf("\t[5]  Temperature Control PID: %s\n", get_value8(Temp_Control) ? "AUTOMATIC":"MANUAL");
-            printf("\t[6]  Heater AC: %f\n", get_value64(HeaterAC));
-            printf("\t[7]  Heater BD: %f\n", get_value64(HeaterBD));
-            printf("\t[8]  Reset: %d\n", get_value8(Reset));
-            printf("\t[9]  Reprogramming: %d\n", get_value8(Reprogramming));
-            printf("\t[10] New FW Data\n");
-            printf("\t[11] Firmware version: %s\n", FW_VERSION);
-            printf("\t[12] PID_AC_Kc: %f\n", get_value64(PID_AC_Kc));
-            printf("\t[13] PID_AC_tauI: %f\n", get_value64(PID_AC_tauI));
-            printf("\t[14] PID_AC_tauD: %f\n", get_value64(PID_AC_tauD));
-            printf("\t[15] PID_BD_Kc: %f\n", get_value64(PID_BD_Kc));
-            printf("\t[16] PID_BD_tauI: %f\n", get_value64(PID_BD_tauI));
-            printf("\t[17] PID_BD_tauD: %f\n", get_value64(PID_BD_tauD));
-            printf("\t[18] IP-Address: %s\n", IP_Addr);
-            printf("\t[19] MAC-Address: %s\n", MAC_Addr);
-            printf("\n");
-        } else if (strcmp( cmd, "set" ) == 0) {
+        if (strncmp( cmd, "dump", 5 ) == 0) {
+            printf("RFFE Vars dump:\n\r");
+            printf("\t[0]  Att: %f\n\r", get_value64(Att));
+            printf("\t[1]  Temperature AC: %f\n\r", get_value64(TempAC));
+            printf("\t[2]  Temperature BD: %f\n\r", get_value64(TempBD));
+            printf("\t[3]  Set PointAC: %f\n\r", get_value64(Set_PointAC));
+            printf("\t[4]  Set PointBD: %f\n\r", get_value64(Set_PointBD));
+            printf("\t[5]  Temperature Control PID: %s\n\r", get_value8(Temp_Control) ? "AUTOMATIC":"MANUAL");
+            printf("\t[6]  Heater AC: %f\n\r", get_value64(HeaterAC));
+            printf("\t[7]  Heater BD: %f\n\r", get_value64(HeaterBD));
+            printf("\t[8]  Reset: %d\n\r", get_value8(Reset));
+            printf("\t[9]  Reprogramming: %d\n\r", get_value8(Reprogramming));
+            printf("\t[10] New FW Data\n\r");
+            printf("\t[11] Firmware version: %s\n\r", FW_VERSION);
+            printf("\t[12] PID_AC_Kc: %f\n\r", get_value64(PID_AC_Kc));
+            printf("\t[13] PID_AC_tauI: %f\n\r", get_value64(PID_AC_tauI));
+            printf("\t[14] PID_AC_tauD: %f\n\r", get_value64(PID_AC_tauD));
+            printf("\t[15] PID_BD_Kc: %f\n\r", get_value64(PID_BD_Kc));
+            printf("\t[16] PID_BD_tauI: %f\n\r", get_value64(PID_BD_tauI));
+            printf("\t[17] PID_BD_tauD: %f\n\r", get_value64(PID_BD_tauD));
+            printf("\t[18] IP-Address: %s\n\r", IP_Addr);
+            printf("\t[19] MAC-Address: %s\n\r", MAC_Addr);
+            printf("\t[20] Gateway-Address: %s\n\r", Gateway_Addr);
+            printf("\t[21] Mask-Address: %s\n\r", Mask_Addr);
+            printf("\n\r");
+        } else if (strncmp( cmd, "set", 4 ) == 0) {
             if ((arg[0] == NULL) || (arg[1] == NULL)) {
-                printf("Command \"set\" used but no arguments given! Type \"help\" to see its correct usage.\n");
+                printf("Command \"set\" used but no arguments given! Type \"help\" to see its correct usage.\n\r");
                 continue;
             }
             uint8_t var_index = strtol( arg[0], NULL, 10);
 
             if (rffe_vars[var_index].info.writable == READ_ONLY) {
-                printf("The requested variable is READ_ONLY!\n");
+                printf("The requested variable is READ_ONLY!\n\r");
                 continue;
             }
 
-            /* Special case for reset */
-            if (var_index == 8) {
-                printf("Resetting MBED...\n");
-                mbed_reset();
-            }
+            /* Clear request msg buffer */
+            memset(msg_buffer, 0, sizeof(msg_buffer));
 
-            if (rffe_vars[var_index].info.size == sizeof(int)){
+            bsmp_mail_t *mail = bsmp_mail_box.alloc();
+
+            mail->response_mail_box = NULL;
+            mail->msg.data = msg_buffer;
+            mail->msg.data[0] = 0x20; /* CMD_VAR_WRITE */
+            mail->msg.data[3] = var_index; /* Payload[0]: Var id */
+
+            uint16_t payload_size = 0;
+
+            switch(rffe_vars[var_index].info.size) {
+            case sizeof(int):
+            {
                 int arg_int = strtol( arg[1], NULL, 10);
-                set_value( (int *)rffe_vars[var_index].data, arg_int);
-            } else if ( (rffe_vars[var_index].info.size == sizeof(double)) ) {
+                memcpy(&(mail->msg.data[4]), &arg_int, sizeof(arg_int));
+                payload_size = sizeof(int);
+                break;
+            }
+            case sizeof(double):
+            {
                 double arg_dbl = strtod( arg[1], NULL);
-                set_value( (double *)rffe_vars[var_index].data, arg_dbl);
-            } else if ( (rffe_vars[var_index].info.size == sizeof(uint8_t)) ) {
-                uint8_t arg_dbl = strtoul( arg[1], NULL, 10);
-                set_value( (uint8_t *)rffe_vars[var_index].data, arg_dbl);
-            } else {
-                printf("Unknown data type to set!\n");
+                memcpy(&(mail->msg.data[4]), &arg_dbl, sizeof(arg_dbl));
+                payload_size = sizeof(double);
+                break;
+            }
+            case sizeof(uint8_t):
+            {
+                uint8_t arg_byte = strtoul( arg[1], NULL, 10);
+                memcpy(&(mail->msg.data[4]), &arg_byte, sizeof(arg_byte));
+                payload_size = sizeof(uint8_t);
+                break;
+            }
+            default:
+                strncpy((char *)&(mail->msg.data[4]), arg[1], rffe_vars[var_index].info.size);
+                payload_size = rffe_vars[var_index].info.size;
             }
 
-        } else if ((strcmp( cmd, "help" ) == 0) || (strcmp( cmd, "?" ) == 0) ) {
-            printf("RFFE Firmware help. Available commands:\n");
-            printf("\tCMD\t[arg1]\t[arg2]\n");
-            printf("\tdump\t\t\tList all variables available and their current status\n");
-            printf("\tset\t[VAR]\t[VALUE]\tSet value to a variable in the list\n");
-            printf("\thelp\t\t\tShow this help menu\n");
+            payload_size++; /* Var id counts as payload */
+            mail->msg.data[1] = (payload_size >> 8) & 0xFF; /* Payload size >> 8 */
+            mail->msg.data[2] = payload_size & 0xFF; /* Payload size */
+            mail->msg.len = payload_size + 3;
+
+            bsmp_mail_box.put(mail);
+
+        } else if ((strncmp( cmd, "help", 5 ) == 0) || (strncmp( cmd, "?", 2 ) == 0) ) {
+            printf("RFFE Firmware help. Available commands:\n\r");
+            printf("\tCMD\t[arg1]\t[arg2]\n\r");
+            printf("\tdump\t\t\tList all variables available and their current status\n\r");
+            printf("\tset\t[VAR]\t[VALUE]\tSet value to a variable in the list\n\r");
+            printf("\thelp\t\t\tShow this help menu\n\r");
         } else {
-            printf("Command \"%s\" not recognized! Please use the command \"help\" to check the CLI usage\n", cli_cmd);
+            printf("Command \"%s\" not recognized! Please use the command \"help\" to check the CLI usage\n\r", cli_cmd);
         }
     }
 }
@@ -402,17 +460,81 @@ void bsmp_hook_signal_threads(enum bsmp_operation op, struct bsmp_var **list)
 
     for (i = 0; list[i] != NULL; i++) {
         var = list[i];
-        if (var->info.id == 0) {
-            // Attenuator value changed
+        /* Special cases */
+        switch( var->info.id ) {
+        case 0:
+            /* Attenuators */
             Attenuators_thread.signal_set(0x01);
+            break;
+        case 8:
+            /* Reset */
+            printf("Resetting MBED...\n\r");
+            mbed_reset();
+            break;
+        case 18:
+            /* IP Address */
+            printf("Updating IP address on FeRAM to %s ...\n\r", IP_Addr);
+            feram.set_ip_addr(IP_Addr);
+            break;
+        case 19:
+            /* MAC Address */
+            printf("Updating MAC address on FeRAM to %s ...\n\r", MAC_Addr);
+            feram.set_mac_addr(MAC_Addr);
+            break;
+        case 20:
+            /* Gateway Address */
+            printf("Updating Gateway address on FeRAM to %s ...\n\r", Gateway_Addr);
+            feram.set_gateway_addr(Gateway_Addr);
+            break;
+        case 21:
+            /* Mask Address */
+            printf("Updating Mask address on FeRAM to %s ...\n\r", Mask_Addr);
+            feram.set_mask_addr(Mask_Addr);
+            break;
         }
+    }
+}
+
+void bsmp_dispatcher( void )
+{
+    struct bsmp_raw_packet mock_response;
+
+    while(1) {
+        /*  Wait for a new message */
+        osEvent evt = bsmp_mail_box.get();
+
+        if (evt.status != osEventMail) {
+            /* Quietly ignore errors for now */
+            continue;
+        }
+
+        bsmp_mail_t *mail = (bsmp_mail_t*)evt.value.p;
+
+        mock_response.data = (uint8_t *) malloc(sizeof(uint8_t)*30);
+
+        /* Proccess BSMP request */
+        bsmp_process_packet(bsmp, &mail->msg, &mock_response);
+
+        /* Only respond if there's a valid mailbox to put the response in */
+        if (mail->response_mail_box) {
+            struct bsmp_raw_packet *response = mail->response_mail_box->alloc();
+            response->data = mock_response.data;
+            response->len = mock_response.len;
+            mail->response_mail_box->put(response);
+        }
+
+        bsmp_mail_box.free(mail);
     }
 }
 
 int main( void )
 {
+    wdt.clear_overflow_flag();
+
     //Init serial port for info printf
     pc.baud(115200);
+
+    printf("Starting RFFEuC firmware "FW_VERSION" !\n\n\r");
 
     bsmp = bsmp_server_new();
 
@@ -457,17 +579,16 @@ int main( void )
     //PID_BD tauI parameter
     set_value(PID_BD_tauD, 2);
 
-    printf("Getting ETH configuration from FeRAM...\n\r");
     feram.get_ip_addr(IP_Addr);
-    feram.get_mac_addr(MAC_Addr);
     feram.get_gateway_addr(Gateway_Addr);
     feram.get_mask_addr(Mask_Addr);
-
-    printf("Values from FeRAM:\n\r");
-    printf("IP : %s\n\r", IP_Addr);
-    printf("Mask : %s\n\r", Mask_Addr);
-    printf("Gateway : %s\n\r", Gateway_Addr);
-    printf("MAC : %s\n\n\r", MAC_Addr);
+    feram.get_mac_addr(MAC_Addr, mac_buffer);
+    printf("Ethernet configuration from FeRAM:\n\r");
+    printf("\tIP : %s\n\r", IP_Addr);
+    printf("\tMask : %s\n\r", Mask_Addr);
+    printf("\tGateway : %s\n\r", Gateway_Addr);
+    printf("\tMAC : %s\n\r", MAC_Addr);
+    printf("\n\r");
 
     for ( uint8_t i = 0; i < sizeof(rffe_vars)/sizeof(rffe_vars[0]); i++) {
         rffe_vars[i].info.id = i;
@@ -478,11 +599,10 @@ int main( void )
     Attenuators_thread.start(Attenuators_Control);
     Temp_Control_thread.start(Temp_Feedback_Control);
     CLI_Proccess_Thread.start(CLI_Proccess);
+    BSMP_Thread.start(bsmp_dispatcher);
 
     // Instantiate our command processor for the  USB serial line.
     scMake(&pc, commandCallback, NULL);
-
-    printf("\nRFFE Firmware Version: %s\n", FW_VERSION);
 
     IAP iap;
     uint8_t *fw_buffer;
@@ -491,10 +611,11 @@ int main( void )
     bool full_page = false;
     uint8_t v_major = 0, v_minor = 0, v_patch = 0;
 
-    struct bsmp_raw_packet request;
-    struct bsmp_raw_packet response;
     uint8_t buf[BUFSIZE];
-    uint8_t bufresponse[BUFSIZE];
+
+    led4 = !pll.cfg_eth();
+
+    Thread::wait(100);
 
     // Ethernet initialization
     EthernetInterface net;
@@ -515,29 +636,29 @@ int main( void )
 #endif
 
     while (true) {
-        printf("Trying to bring up ethernet connection...\n");
+        printf("Trying to bring up ethernet connection...\n\r");
         while (net.connect() != 0) {
-            printf("Attempt failed. Trying again in 0.5s... \n");
+            printf("Attempt failed. Trying again in 0.5s... \n\r");
             Thread::wait(500);
         }
-        printf("Success! RFFE eth server is up!\n");
+        printf("Success! RFFE eth server is up!\n\r");
 
-        printf("RFFE IP: %s\n", IP_Addr);
-        printf("RFFE MAC Address: %s\n", MAC_Addr);
+        printf("RFFE IP: %s\n\r", IP_Addr);
+        printf("RFFE MAC Address: %s\n\r", MAC_Addr);
 
-        printf("Listening on port %d...\n", SERVER_PORT);
+        printf("Listening on port %d...\n\r", SERVER_PORT);
 
         server.open(&net);
         server.bind(net.get_ip_address(), SERVER_PORT);
         server.listen();
 
         while (true) {
-            printf(" Waiting for new client connection...\n");
+            printf("Waiting for new client connection...\n\r");
 
             server.accept(&client, &client_addr);
             client.set_blocking(1500);
 
-            printf("Connection from client: %s\n", client_addr.get_ip_address());
+            printf("Connection from client: %s\n\r", client_addr.get_ip_address());
 
             while ( get_eth_link_status() ) {
 
@@ -566,27 +687,39 @@ int main( void )
                 for (int i = 0; i < recv_sz; i++) {
                     printf("0x%X ",buf[i]);
                 }
-                printf("\n");
+                printf("\n\r");
 #endif
-                request.data = buf;
-                request.len = recv_sz;
+                bsmp_mail_t *mail = bsmp_mail_box.alloc();
 
-                response.data = bufresponse;
+                mail->response_mail_box = &eth_mail_box;
+                mail->msg.data = buf;
+                mail->msg.len = recv_sz;
 
-                bsmp_process_packet(bsmp, &request, &response);
+                bsmp_mail_box.put(mail);
 
-                sent_sz = client.send((char*)response.data, response.len);
+                osEvent evt = eth_mail_box.get();
+
+                if (evt.status != osEventMail) {
+                    /* Quietly ignore errors for now */
+                    continue;
+                }
+
+                struct bsmp_raw_packet *response_mail = (struct bsmp_raw_packet *)evt.value.p;
+
+                sent_sz = client.send((char*)response_mail->data, response_mail->len);
 
 #ifdef DEBUG_PRINTF
                 printf("Sending message of %d bytes: ", sent_sz);
                 for (int i = 0; i < sent_sz; i++) {
-                    printf("0x%X ",response.data[i]);
+                    printf("0x%X ",response_mail->data[i]);
                 }
-                printf("\n");
+                printf("\n\r");
 #endif
+                free(response_mail->data);
+                eth_mail_box.free(response_mail);
 
                 if (sent_sz <= 0) {
-                    printf("ERROR while writing to socket!\n");
+                    printf("ERROR while writing to socket!\n\r");
                     continue;
                 }
 
@@ -645,13 +778,13 @@ int main( void )
                 }
 
                 if (get_value8(Reset) == 1) {
-                    printf("Resetting MBED!\n");
+                    printf("Resetting MBED!\n\r");
                     mbed_reset();
                 }
             }
 
             client.close();
-            printf("Client Disconnected!\n");
+            printf("Client Disconnected!\n\r");
 
             if (get_eth_link_status() == 0) {
                 /* Eth link is down, clean-up server connection */

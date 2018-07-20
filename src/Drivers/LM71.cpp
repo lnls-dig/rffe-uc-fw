@@ -6,7 +6,7 @@ double LM71::Read()
     double temp = 0;
 
     if (_mode != LM71_MODE_CONVERSION) {
-    	LM71::Config(_freq, LM71_MODE_CONVERSION);
+        LM71::Config(_freq, LM71_MODE_CONVERSION);
     }
 
     _spi.format(16,0);

@@ -134,3 +134,39 @@ int FeRAM::set_gateway_addr(char *gateway_str)
 
     return err;
 }
+
+int FeRAM::get_attenuation(double *att)
+{
+    int err;
+    uint8_t att_buf[4];
+    int att_int;
+
+    err = FeRAM::read(FERAM_ATTENUATION_OFFSET, att_buf, sizeof(att_buf));
+
+    att_int = (att_buf[0] << 24) | (att_buf[1] << 16) | (att_buf[2] << 8) | att_buf[3];
+
+    if (att) {
+	*att = (double) (att_int/2);
+    } else {
+	err = -1;
+    }
+
+    return err;
+}
+
+int FeRAM::set_attenuation(double att)
+{
+    int err;
+    uint8_t att_buf[4];
+
+    int att_int = (int) (att*2);
+
+    att_buf[0] = (att_int >> 24) & 0xFF;
+    att_buf[1] = (att_int >> 16) & 0xFF;
+    att_buf[2] = (att_int >> 8) & 0xFF;
+    att_buf[3] = att_int & 0xFF;
+
+    err = FeRAM::write(FERAM_ATTENUATION_OFFSET, att_buf, sizeof(att_buf));
+
+    return err;
+}

@@ -161,6 +161,13 @@ void mbed_reset( void )
     while(1);
 }
 
+void wdt_heartbeat( void )
+{
+    /* If we don't receive a new message from the BSMP client in the next 10s, reset */
+    /* This is a VERY dirty workaround for the hanging TCP bug, it's temporary so we don't stop the comissioning */
+    wdt.kick(10.0);
+}
+
 bool get_eth_link_status(void)
 {
     return (lpc_mii_read_data() & DP8_VALID_LINK) ? true : false;
@@ -302,6 +309,9 @@ void Attenuators_Control( void )
 #ifdef DEBUG_PRINTF
             printf("\n\rAtt values updated from: %f to %f\n\r", prev_att1, get_value64(Att));
 #endif
+	    /* Save new value to FeRAM */
+	    feram.set_attenuation(Att[0]);
+
             // Updating previous values
             prev_att1 = get_value64(Att);
             int2bin6(int(prev_att1*2), attVec1);
@@ -455,7 +465,6 @@ void bsmp_hook_signal_threads(enum bsmp_operation op, struct bsmp_var **list)
 {
     bsmp_var *var = NULL;
     uint8_t i = 0;
-    uint8_t att_int;
 
     if (op == BSMP_OP_READ) return;
 
@@ -465,10 +474,14 @@ void bsmp_hook_signal_threads(enum bsmp_operation op, struct bsmp_var **list)
         switch( var->info.id ) {
         case 0:
             /* Attenuators */
-	    att_int = (int) (get_value64(Att)*2);
-	    feram.write(FERAM_ATTENUATION_OFFSET, &att_int, sizeof(att_int));
             Attenuators_thread.signal_set(0x01);
             break;
+	case 1:
+	case 2:
+	case 6:
+	case 7:
+	    wdt_heartbeat();
+	    break;
         case 8:
             /* Reset */
             printf("Resetting MBED...\n\r");
@@ -524,7 +537,9 @@ void bsmp_dispatcher( void )
             response->data = mock_response.data;
             response->len = mock_response.len;
             mail->response_mail_box->put(response);
-        }
+        } else {
+	    free(mock_response.data);
+	}
 
         bsmp_mail_box.free(mail);
     }
@@ -532,11 +547,7 @@ void bsmp_dispatcher( void )
 
 int main( void )
 {
-    uint8_t att_int;
-
     wdt.clear_overflow_flag();
-
-    feram.read(FERAM_ATTENUATION_OFFSET, &att_int, sizeof(att_int));
 
     //Init serial port for info printf
     pc.baud(115200);
@@ -552,7 +563,7 @@ int main( void )
 
     // Variables initialization
     // Attenuators
-    set_value(Att, ((double) att_int)/2.0);
+    //set_value(Att, 30.0);
     // TempAC
     set_value(TempAC, 0.0);
     // TempBD
@@ -586,6 +597,7 @@ int main( void )
     //PID_BD tauI parameter
     set_value(PID_BD_tauD, 2);
 
+    feram.get_attenuation(Att);
     feram.get_ip_addr(IP_Addr);
     feram.get_gateway_addr(Gateway_Addr);
     feram.get_mask_addr(Mask_Addr);

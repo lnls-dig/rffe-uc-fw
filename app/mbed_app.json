@@ -1,0 +1,36 @@
+{
+    "config": {
+        "Temperature_Sensor": {
+            "help": "Select temperature sensor being used in the control board (0: LM71; 1: ADT7320)",
+            "macro_name": "TEMP_SENSOR",
+            "value": 0
+        },
+
+        "main-stack-size": {
+            "value": 1000
+        },
+
+        "thread-stack-size": {
+            "value": 1000
+        }
+    },
+
+    "target_overrides": {
+        "*": {
+            "target.restrict_size": "0x38000",
+            "target.bootloader_img": "../BUILD/bootloader/bootloader.bin",
+            "target.features_add": ["LWIP", "COMMON_PAL"],
+            "mbed-trace.enable": true,
+            "platform.stdio-convert-newlines": true,
+            "platform.stdio-baud-rate": 115200,
+            "platform.default-serial-baud-rate": 115200,
+            "platform.error-filename-capture-enabled": true,
+            "platform.memory-tracing-enabled": true,
+            "target.network-default-interface-type": "ETHERNET",
+            "lwip.use-mbed-trace": false,
+            "lwip.debug-enabled": false,
+            "filesystem.present": false,
+            "events.present": true
+        }
+    }
+}

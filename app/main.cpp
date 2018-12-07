@@ -494,37 +494,6 @@ void bsmp_dispatcher( void )
     }
 }
 
-EventFlags eth_evt;
-
-void eth_status_callback(nsapi_event_t status, intptr_t param)
-{
-    //printf("Connection status changed!\r\n");
-    eth_evt.set(param);
-
-    switch(param) {
-    case NSAPI_STATUS_LOCAL_UP:
-        printf("Local IP address set!\r\n");
-        break;
-
-    case NSAPI_STATUS_GLOBAL_UP:
-        printf("Global IP address set!\r\n");
-        break;
-
-    case NSAPI_STATUS_DISCONNECTED:
-        printf("No connection to network!\r\n");
-        break;
-
-    case NSAPI_STATUS_CONNECTING:
-        printf("Connecting to network!\r\n");
-        break;
-
-    default:
-        printf("Not supported");
-        break;
-    }
-}
-
-
 int main( void )
 {
     wdt.clear_overflow_flag();
@@ -626,9 +595,6 @@ int main( void )
 
     int recv_sz, sent_sz;
 
-    //net.attach(&eth_status_callback);
-    //net.set_blocking(false);
-
     if (get_value8(Eth_Addressing)) {
         net.set_dhcp(true);
     } else {
@@ -639,9 +605,6 @@ int main( void )
     while (true) {
         printf("Trying to bring up ethernet connection...\r\n");
 
-#if 0
-        eth_evt.wait_all(NSAPI_STATUS_GLOBAL_UP);
-#endif
         do {
             err = net.connect();
 

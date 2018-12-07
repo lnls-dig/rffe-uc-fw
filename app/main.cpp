@@ -654,172 +654,171 @@ int main( void )
             printf("\tGateway: %s\r\n", Gateway_Addr);
         }
 
-            server.open(&net);
-            server.bind(net.get_ip_address(), SERVER_PORT);
-            server.listen();
-            server.set_blocking(1500);
-            printf("\r\nListening on port %d...\r\n", SERVER_PORT);
+        server.open(&net);
+        server.bind(net.get_ip_address(), SERVER_PORT);
+        server.listen();
+        server.set_blocking(1500);
+        printf("\r\nListening on port %d...\r\n", SERVER_PORT);
 
-            while (true) {
-                printf("Waiting for new client connection...\r\n");
-                led_g = 0;
+        while (true) {
+            printf("Waiting for new client connection...\r\n");
+            led_g = 0;
 
-                server.accept(&client, &client_addr);
-                client.set_blocking(1500);
+            server.accept(&client, &client_addr);
+            client.set_blocking(1500);
 
-                printf("Connection from client: %s\r\n", client_addr.get_ip_address());
+            printf("Connection from client: %s\r\n", client_addr.get_ip_address());
 
-                led_g = 1;
-                led4 = 1;
-                while ( cable_status.link() ) {
+            led_g = 1;
+            led4 = 1;
+            while ( cable_status.link() ) {
 
-                    /* Wait to receive data from client */
-                    recv_sz = client.recv((char*)buf, 3);
+                /* Wait to receive data from client */
+                recv_sz = client.recv((char*)buf, 3);
 
-                    if (recv_sz == 3) {
-                        /* We received a complete message header */
-                        uint16_t payload_len = (buf[1] << 8) | buf[2];
-                        /* Check if we need to receive some more bytes. This
-                         * fixes #9 github issue, in that we end up stuck here
-                         * waiting for more bytes that never comes */
-                        if (payload_len > 0) {
-                            recv_sz += client.recv( (char*) &buf[3], payload_len );
-                        }
-                    } else if (recv_sz <= 0) {
-                        /* Special case for disconnections - just discard the socket and await a new connection */
-                        break;
-                    } else {
-                        printf("Received malformed message header of size: %d , discarding...", recv_sz );
-                        continue;
+                if (recv_sz == 3) {
+                    /* We received a complete message header */
+                    uint16_t payload_len = (buf[1] << 8) | buf[2];
+                    /* Check if we need to receive some more bytes. This
+                     * fixes #9 github issue, in that we end up stuck here
+                     * waiting for more bytes that never comes */
+                    if (payload_len > 0) {
+                        recv_sz += client.recv( (char*) &buf[3], payload_len );
                     }
-
-#ifdef DEBUG_PRINTF
-                    printf("Received message of %d bytes: ", recv_sz);
-                    for (int i = 0; i < recv_sz; i++) {
-                        printf("0x%X ",buf[i]);
-                    }
-                    printf("\r\n");
-#endif
-                    bsmp_mail_t *mail = bsmp_mail_box.alloc();
-
-                    mail->response_mail_box = &eth_mail_box;
-                    mail->msg.data = buf;
-                    mail->msg.len = recv_sz;
-
-                    bsmp_mail_box.put(mail);
-
-                    osEvent evt = eth_mail_box.get();
-
-                    if (evt.status != osEventMail) {
-                        /* Quietly ignore errors for now */
-                        continue;
-                    }
-
-                    struct bsmp_raw_packet *response_mail = (struct bsmp_raw_packet *)evt.value.p;
-
-                    sent_sz = client.send((char*)response_mail->data, response_mail->len);
-
-#ifdef DEBUG_PRINTF
-                    printf("Sending message of %d bytes: ", sent_sz);
-                    for (int i = 0; i < sent_sz; i++) {
-                        printf("0x%X ",response_mail->data[i]);
-                    }
-                    printf("\r\n");
-#endif
-                    free(response_mail->data);
-                    eth_mail_box.free(response_mail);
-
-                    if (sent_sz <= 0) {
-                        printf("ERROR while writing to socket!\r\n");
-                        continue;
-                    }
-
-                    if (state != get_value8(Reprogramming)) {
-                        switch (get_value8(Reprogramming)) {
-                        case 1:
-                            /* Read new firmware version */
-                            v_major = Data[0];
-                            v_minor = Data[1];
-                            v_patch = Data[2];
-
-                            sector_erased = false;
-                            last_page_addr = (APPLICATION_ADDR + APPLICATION_SIZE);
-                            next_sector = last_page_addr + flash.get_sector_size(last_page_addr);
-                            memset(fw_buffer, 0xFF, sizeof(fw_buffer));
-                            break;
-
-                        case 2:
-                        {
-                            const uint32_t magic_addr = flash.get_flash_size() - 256;
-                            memcpy(fw_buffer, (uint32_t *)magic_addr, 256);
-
-                            /* Store version number */
-                            fw_buffer[248] = v_major;
-                            fw_buffer[249] = v_minor;
-                            fw_buffer[250] = v_patch;
-
-                            /* Write the bootloader magic word in the last 4 bytes of the page */
-                            const uint32_t magic_word[] = {0xAAAAAAAA};
-
-                            printf("Writing bootloader magic word at 0x%lX\r\n", magic_addr + 252);
-                            memcpy(&fw_buffer[252], magic_word, sizeof(magic_word));
-
-                            /* Write back to flash */
-                            __disable_irq();
-                            flash.write((uint32_t *)fw_buffer, magic_addr, 256);
-                            __enable_irq();
-                            break;
-                        }
-                        default:
-                            break;
-                        }
-                        state = get_value8(Reprogramming);
-                    }
-
-                    if (get_value8(Reprogramming) == 1 && buf[0] == 0x20 && buf[3] == 0x0A ) {
-                        if (full_page == false) {
-                            memcpy(fw_buffer, Data, FILE_DATASIZE);
-                            full_page = true;
-                        } else {
-                            memcpy(&fw_buffer[FILE_DATASIZE], Data, FILE_DATASIZE);
-#ifdef DEBUG_PRINTF
-                            printf("[REPROGRAM] Writing page 0x%X\r\n", last_page_addr);
-#endif
-                            /* A full firmware page was sent, copy data to file */
-                            if (!sector_erased) {
-                                __disable_irq();
-                                flash.erase(flash.find_sector(last_page_addr));
-                                __enable_irq();
-                                sector_erased = true;
-                            }
-                            __disable_irq();
-                            flash.write((uint32_t *)fw_buffer, last_page_addr, 256);
-                            __enable_irq();
-                            last_page_addr += 256;
-                            if (last_page_addr >= next_sector) {
-                                next_sector = last_page_addr + flash.get_sector_size(last_page_addr);
-                                sector_erased = false;
-                            }
-
-                            full_page = false;
-                        }
-                    }
-
-                    if (get_value8(Reset) == 1) {
-                        printf("Resetting MBED!\r\n");
-                        mbed_reset();
-                    }
-                }
-
-                client.close();
-                printf("Client Disconnected!\r\n");
-
-                if (cable_status.link() == 0) {
-                    /* Eth link is down, clean-up server connection */
-                    server.close();
-                    net.disconnect();
+                } else if (recv_sz <= 0) {
+                    /* Special case for disconnections - just discard the socket and await a new connection */
                     break;
+                } else {
+                    printf("Received malformed message header of size: %d , discarding...", recv_sz );
+                    continue;
                 }
+
+#ifdef DEBUG_PRINTF
+                printf("Received message of %d bytes: ", recv_sz);
+                for (int i = 0; i < recv_sz; i++) {
+                    printf("0x%X ",buf[i]);
+                }
+                printf("\r\n");
+#endif
+                bsmp_mail_t *mail = bsmp_mail_box.alloc();
+
+                mail->response_mail_box = &eth_mail_box;
+                mail->msg.data = buf;
+                mail->msg.len = recv_sz;
+
+                bsmp_mail_box.put(mail);
+
+                osEvent evt = eth_mail_box.get();
+
+                if (evt.status != osEventMail) {
+                    /* Quietly ignore errors for now */
+                    continue;
+                }
+
+                struct bsmp_raw_packet *response_mail = (struct bsmp_raw_packet *)evt.value.p;
+
+                sent_sz = client.send((char*)response_mail->data, response_mail->len);
+
+#ifdef DEBUG_PRINTF
+                printf("Sending message of %d bytes: ", sent_sz);
+                for (int i = 0; i < sent_sz; i++) {
+                    printf("0x%X ",response_mail->data[i]);
+                }
+                printf("\r\n");
+#endif
+                free(response_mail->data);
+                eth_mail_box.free(response_mail);
+
+                if (sent_sz <= 0) {
+                    printf("ERROR while writing to socket!\r\n");
+                    continue;
+                }
+
+                if (state != get_value8(Reprogramming)) {
+                    switch (get_value8(Reprogramming)) {
+                    case 1:
+                        /* Read new firmware version */
+                        v_major = Data[0];
+                        v_minor = Data[1];
+                        v_patch = Data[2];
+
+                        sector_erased = false;
+                        last_page_addr = (APPLICATION_ADDR + APPLICATION_SIZE);
+                        next_sector = last_page_addr + flash.get_sector_size(last_page_addr);
+                        memset(fw_buffer, 0xFF, sizeof(fw_buffer));
+                        break;
+
+                    case 2:
+                    {
+                        const uint32_t magic_addr = flash.get_flash_size() - 256;
+                        memcpy(fw_buffer, (uint32_t *)magic_addr, 256);
+
+                        /* Store version number */
+                        fw_buffer[248] = v_major;
+                        fw_buffer[249] = v_minor;
+                        fw_buffer[250] = v_patch;
+
+                        /* Write the bootloader magic word in the last 4 bytes of the page */
+                        const uint32_t magic_word[] = {0xAAAAAAAA};
+
+                        printf("Writing bootloader magic word at 0x%lX\r\n", magic_addr + 252);
+                        memcpy(&fw_buffer[252], magic_word, sizeof(magic_word));
+
+                        /* Write back to flash */
+                        __disable_irq();
+                        flash.write((uint32_t *)fw_buffer, magic_addr, 256);
+                        __enable_irq();
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+                    state = get_value8(Reprogramming);
+                }
+
+                if (get_value8(Reprogramming) == 1 && buf[0] == 0x20 && buf[3] == 0x0A ) {
+                    if (full_page == false) {
+                        memcpy(fw_buffer, Data, FILE_DATASIZE);
+                        full_page = true;
+                    } else {
+                        memcpy(&fw_buffer[FILE_DATASIZE], Data, FILE_DATASIZE);
+#ifdef DEBUG_PRINTF
+                        printf("[REPROGRAM] Writing page 0x%X\r\n", last_page_addr);
+#endif
+                        /* A full firmware page was sent, copy data to file */
+                        if (!sector_erased) {
+                            __disable_irq();
+                            flash.erase(flash.find_sector(last_page_addr));
+                            __enable_irq();
+                            sector_erased = true;
+                        }
+                        __disable_irq();
+                        flash.write((uint32_t *)fw_buffer, last_page_addr, 256);
+                        __enable_irq();
+                        last_page_addr += 256;
+                        if (last_page_addr >= next_sector) {
+                            next_sector = last_page_addr + flash.get_sector_size(last_page_addr);
+                            sector_erased = false;
+                        }
+
+                        full_page = false;
+                    }
+                }
+
+                if (get_value8(Reset) == 1) {
+                    printf("Resetting MBED!\r\n");
+                    mbed_reset();
+                }
+            }
+
+            client.close();
+            printf("Client Disconnected!\r\n");
+
+            if (cable_status.link() == 0) {
+                /* Eth link is down, clean-up server connection */
+                server.close();
+                net.disconnect();
+                break;
             }
         }
     }

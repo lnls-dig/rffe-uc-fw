@@ -601,51 +601,58 @@ int main( void )
         net.set_network(IP_Addr,Mask_Addr,Gateway_Addr);
     }
 
-    int err, retry = 3;
+    int err;
     while (true) {
         printf("Trying to bring up ethernet connection...\r\n");
+        led_r = 1;
 
         do {
             err = net.connect();
 
-            if (err == NSAPI_ERROR_NO_CONNECTION) {
-                printf("Ethernet link up has failed. Check if the cable is connected and functional.\r\n");
-            } else if (err == NSAPI_ERROR_DHCP_FAILURE) {
-                printf("DHCP Failure. Could not obtain an IP Address.\r\nPlease check if the address configuration server is functional or change the addressing to Fixed IP via CLI (type \"help\" for more info).\r\n");
-                retry--;
-            } else if (err == NSAPI_ERROR_ALREADY) {
-                continue;
-            } else if (err != 0) {
-                printf("Ethernet unknown error value: %d\r\n", err);
-                retry--;
-                if (!cable_status.link()) {
-                    printf("Ethernet cable not connected! Please provide the proper connection.\r\n");
+            if (!cable_status.link()) {
+                printf("Ethernet cable not connected! Please provide the proper connection.\r\n");
+            } else {
+                switch (err) {
+                case NSAPI_ERROR_OK:
+                    printf("[ETHERNET] Interface is UP!\r\n");
+                    break;
+
+                case NSAPI_ERROR_NO_CONNECTION:
+                    printf("[ETHERNET] Link up has failed. Check if the cable link functional.\r\n");
+                    break;
+
+                case NSAPI_ERROR_DHCP_FAILURE:
+                    printf("[ETHERNET] DHCP Failure. Could not obtain an IP Address.\r\n");
+                    printf("Please check if the address configuration server is functional or change the addressing to Fixed IP via CLI (type \"help\" for more info).\r\n");
+                    break;
+
+                case NSAPI_ERROR_ALREADY:
+                    /* The ethernet interface is still trying to connect */
+                    break;
+
+                default:
+                    printf("[ETHERNET] Unknown error: %d\r\n", err);
+                    break;
                 }
-
-                ThisThread::sleep_for(2000);
-            } while ( (err != 0) && (retry > 0) );
-
-            if (err != 0) {
-                led_r = 1;
-                printf("Stopping ethernet connection retries. Check the issue and reboot the firmware if needed.\r\n The remaining functionalities that don't depend on ethernet will continue to run\r\n");
-                //Thread::terminate();
-                // Specify 3 flags so that we can lock this thread forever. No one should be signaling us, it's just for safety.
-                ThisThread::flags_wait_all(0xFF);
             }
 
-            led3 = 1;
-            printf("Success! RFFE eth server is up!\r\n");
+            ThisThread::sleep_for(1000);
+        } while ( err != NSAPI_ERROR_OK );
 
-            if (get_value8(Eth_Addressing)) {
-                set_value(IP_Addr, net.get_ip_address(), sizeof(IP_Addr));
-                set_value(Gateway_Addr, net.get_gateway(), sizeof(Gateway_Addr));
-                set_value(Mask_Addr, net.get_netmask(), sizeof(Mask_Addr));
+        led_r = 0;
+        led3 = 1;
+        printf("Success! RFFE eth server is up!\r\n");
 
-                printf("Ethernet configs from DHCP:\r\n");
-                printf("\tIP: %s\r\n", IP_Addr);
-                printf("\tNetmask: %s\r\n", Mask_Addr);
-                printf("\tGateway: %s\r\n", Gateway_Addr);
-            }
+        if (get_value8(Eth_Addressing)) {
+            set_value(IP_Addr, net.get_ip_address(), sizeof(IP_Addr));
+            set_value(Gateway_Addr, net.get_gateway(), sizeof(Gateway_Addr));
+            set_value(Mask_Addr, net.get_netmask(), sizeof(Mask_Addr));
+
+            printf("Ethernet configs from DHCP:\r\n");
+            printf("\tIP: %s\r\n", IP_Addr);
+            printf("\tNetmask: %s\r\n", Mask_Addr);
+            printf("\tGateway: %s\r\n", Gateway_Addr);
+        }
 
             server.open(&net);
             server.bind(net.get_ip_address(), SERVER_PORT);

@@ -727,9 +727,9 @@ void Eth_Handler( void )
                         full_page = true;
                     } else {
                         memcpy(&fw_buffer[FILE_DATASIZE], Data, FILE_DATASIZE);
-#ifdef DEBUG_PRINTF
+
                         printf("[REPROGRAM] Writing page 0x%X\r\n", last_page_addr);
-#endif
+
                         /* A full firmware page was sent, copy data to file */
                         if (!sector_erased) {
                             __disable_irq();

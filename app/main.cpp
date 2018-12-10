@@ -494,6 +494,14 @@ void bsmp_dispatcher( void )
     }
 }
 
+void print_buffer( uint8_t *buf, int sz )
+{
+    for (int i = 0; i < sz; i++) {
+        printf("0x%X ",buf[i]);
+    }
+    printf("\r\n");
+}
+
 int main( void )
 {
     wdt.clear_overflow_flag();
@@ -713,11 +721,8 @@ int main( void )
                 }
 
 #ifdef DEBUG_PRINTF
-                for (int i = 0; i < recv_sz; i++) {
-                    printf("0x%X ",buf[i]);
-                }
-                printf("\r\n");
                 printf("[ETHERNET] Received message of %d bytes:\r\n\t", recv_sz);
+                print_buffer(buf, recv_sz);
 #endif
                 bsmp_mail_t *mail = bsmp_mail_box.alloc();
 
@@ -739,11 +744,8 @@ int main( void )
                 sent_sz = client.send((char*)response_mail->data, response_mail->len);
 
 #ifdef DEBUG_PRINTF
-                for (int i = 0; i < sent_sz; i++) {
-                    printf("0x%X ",response_mail->data[i]);
-                }
-                printf("\r\n");
                 printf("[ETHERNET] Sending message of %d bytes:\r\n\t", sent_sz);
+                print_buffer(buf, recv_sz);
 #endif
                 free(response_mail->data);
                 eth_mail_box.free(response_mail);

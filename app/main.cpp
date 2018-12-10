@@ -591,49 +591,48 @@ int main( void )
     TCPSocket client;
     SocketAddress client_addr;
     TCPServer server;
-    Ethernet cable_status;
-
     int recv_sz, sent_sz;
+    int err, link;
 
-    if (get_value8(Eth_Addressing)) {
-        net.set_dhcp(true);
-    } else {
-        net.set_network(IP_Addr,Mask_Addr,Gateway_Addr);
-    }
-
-    int err;
     while (true) {
         printf("Trying to bring up ethernet connection...\r\n");
         led_r = 1;
 
+        if (get_value8(Eth_Addressing)) {
+            net.set_dhcp(true);
+        } else {
+            net.set_network(IP_Addr,Mask_Addr,Gateway_Addr);
+        }
+
         do {
             err = net.connect();
 
-            if (!cable_status.link()) {
-                printf("Ethernet cable not connected! Please provide the proper connection.\r\n");
-            } else {
-                switch (err) {
-                case NSAPI_ERROR_OK:
-                    printf("[ETHERNET] Interface is UP!\r\n");
-                    break;
+            switch (err) {
+            case NSAPI_ERROR_OK:
+                printf("[ETHERNET] Interface is UP!\r\n");
+                break;
 
-                case NSAPI_ERROR_NO_CONNECTION:
-                    printf("[ETHERNET] Link up has failed. Check if the cable link functional.\r\n");
-                    break;
+            case NSAPI_ERROR_NO_CONNECTION:
+                printf("[ETHERNET] Link up has failed. Check if the cable link is functional.\r\n");
+                break;
 
-                case NSAPI_ERROR_DHCP_FAILURE:
-                    printf("[ETHERNET] DHCP Failure. Could not obtain an IP Address.\r\n");
-                    printf("Please check if the address configuration server is functional or change the addressing to Fixed IP via CLI (type \"help\" for more info).\r\n");
-                    break;
+            case NSAPI_ERROR_DHCP_FAILURE:
+                printf("[ETHERNET] DHCP Failure. Could not obtain an IP Address.\r\n");
+                printf("Please check if the address configuration server is functional or change the addressing to Fixed IP via CLI (type \"help\" for more info).\r\n");
+                break;
 
-                case NSAPI_ERROR_ALREADY:
-                    /* The ethernet interface is still trying to connect */
-                    break;
+            case NSAPI_ERROR_ALREADY:
+                /* The ethernet interface is still trying to connect */
+                break;
 
-                default:
-                    printf("[ETHERNET] Unknown error: %d\r\n", err);
-                    break;
-                }
+            case NSAPI_ERROR_IS_CONNECTED:
+                printf("[ETHERNET] Interface is connected!\r\n");
+                err = NSAPI_ERROR_OK;
+                break;
+
+            default:
+                printf("[ETHERNET] Unknown error: %d\r\n", err);
+                break;
             }
 
             ThisThread::sleep_for(1000);
@@ -641,7 +640,6 @@ int main( void )
 
         led_r = 0;
         led3 = 1;
-        printf("Success! RFFE eth server is up!\r\n");
 
         if (get_value8(Eth_Addressing)) {
             set_value(IP_Addr, net.get_ip_address(), sizeof(IP_Addr));
@@ -657,24 +655,38 @@ int main( void )
         server.open(&net);
         server.bind(net.get_ip_address(), SERVER_PORT);
         server.listen();
-        server.set_blocking(1500);
-        printf("\r\nListening on port %d...\r\n", SERVER_PORT);
+        server.set_blocking(true);
+        server.set_timeout(1000);
 
-        while (true) {
-            printf("Waiting for new client connection...\r\n");
+        printf("[ETHERNET] RFFE eth server is up and listening on port %d!\r\n", SERVER_PORT);
+
+        link = net.get_connection_status();
+        while (link == NSAPI_STATUS_GLOBAL_UP) {
+            printf("[ETHERNET] Waiting for new client connection...\r\n");
             led_g = 0;
 
-            server.accept(&client, &client_addr);
-            client.set_blocking(1500);
+            do {
+                err = server.accept(&client, &client_addr);
+            } while ( err != NSAPI_ERROR_OK );
 
-            printf("Connection from client: %s\r\n", client_addr.get_ip_address());
+            client.set_blocking(false);
+            client.set_timeout(1000);
+
+            printf("[ETHERNET] Connection from client: %s\r\n", client_addr.get_ip_address());
 
             led_g = 1;
             led4 = 1;
-            while ( cable_status.link() ) {
-
+            while ( true ) {
                 /* Wait to receive data from client */
                 recv_sz = client.recv((char*)buf, 3);
+
+                /* Update cable link status */
+                link = net.get_connection_status();
+
+                if (link == NSAPI_STATUS_CONNECTING) {
+                    printf("[ETHERNET] Cable disconnected!\r\n");
+                    break;
+                }
 
                 if (recv_sz == 3) {
                     /* We received a complete message header */
@@ -685,11 +697,18 @@ int main( void )
                     if (payload_len > 0) {
                         recv_sz += client.recv( (char*) &buf[3], payload_len );
                     }
-                } else if (recv_sz <= 0) {
-                    /* Special case for disconnections - just discard the socket and await a new connection */
+                } else if (recv_sz == -3001) {
+                    /* Would block */
+                    continue;
+                } else if (recv_sz < 0) {
+                    printf("[ETHERNET] Unknown error when trying to receive msg from client: %d\r\n", recv_sz);
+                    break;
+                } else if (recv_sz == 0) {
+                    printf("[ETHERNET] Client disconnected!\r\n");
                     break;
                 } else {
-                    printf("Received malformed message header of size: %d , discarding...", recv_sz );
+                    printf("[BSMP] Received malformed message header of size: %d\r\n\t", recv_sz );
+                    print_buffer(buf, recv_sz);
                     continue;
                 }
 
@@ -810,16 +829,13 @@ int main( void )
                     mbed_reset();
                 }
             }
-
+            /* If we're out of the connection loop, either the connection has crashed or the client has disconnected, clean-up */
             client.close();
-            printf("Client Disconnected!\r\n");
-
-            if (cable_status.link() == 0) {
-                /* Eth link is down, clean-up server connection */
-                server.close();
-                net.disconnect();
-                break;
-            }
         }
+
+        /* Eth link is down, clean-up server connection */
+        printf("[ETHERNET] Cleaning up server connection and interface\r\n");
+        server.close();
+        net.disconnect();
     }
 }

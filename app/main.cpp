@@ -304,7 +304,10 @@ void CLI_Proccess( void )
     char *arg[2];
     uint8_t msg_buffer[30] = {0};
 
-    printf("Initializing CLI_Proccess thread\r\n");
+    printf("[CLI] Initializing CLI thread\r\n");
+
+    /* Instantiate our command processor for the  USB serial line. */
+    scMake(&pc, commandCallback, NULL);
 
     for( ; ; ) {
         ThisThread::flags_wait_all(0x01);
@@ -579,9 +582,6 @@ int main( void )
     Temp_Control_thread.start(Temp_Feedback_Control);
     CLI_Proccess_Thread.start(CLI_Proccess);
     BSMP_Thread.start(bsmp_dispatcher);
-
-    // Instantiate our command processor for the  USB serial line.
-    scMake(&pc, commandCallback, NULL);
 
     uint8_t state = 0;
     uint32_t last_page_addr, next_sector;

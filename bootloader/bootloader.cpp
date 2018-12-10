@@ -3,11 +3,6 @@
 #define BOOTLOADER_MAGIC_WORD 0xAAAAAAAA
 #define UPDATE_ADDRESS_OFFSET 0x48000
 
-//DigitalOut led1(P1_18);
-//DigitalOut led2(P1_20);
-//DigitalOut led3(P1_21);
-//DigitalOut led4(P1_23);
-
 RawSerial pc(P0_2, P0_3); // Serial USB port. (NOTE: All printf() calls are redirected to this port)
 FlashIAP flash;
 const uint32_t page_size = flash.get_page_size();
@@ -41,11 +36,16 @@ void update(uint32_t address)
             next_sector = addr + flash.get_sector_size(addr);
             sector_erased = false;
         }
+    }
 
+    /* Erase the update sector of the Flash */
+    src = UPDATE_ADDRESS_OFFSET;
+    while (src < flash_size) {
+        flash.erase(src, flash.get_sector_size(src));
+        src += flash.get_sector_size(src);
     }
 
     delete[] page_buffer;
-
 }
 
 int main (void)
@@ -62,10 +62,9 @@ int main (void)
     flash.read(version, (flash_size - 8), 3);
 
     if(upgr_fw_id == BOOTLOADER_MAGIC_WORD) {
-        //led1 = led2 = led3 = led4 = 1;
-        printf("Updating firmware to new version %d.%d.%d\n", version[0], version[1], version[2]);
+        printf("Updating firmware to new version %d.%d.%d\r\n", version[0], version[1], version[2]);
         update(POST_APPLICATION_ADDR);
-        printf("Update finished!\n");
+        printf("Update finished!\r\n");
     }
 
     flash.deinit();

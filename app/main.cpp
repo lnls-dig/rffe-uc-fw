@@ -63,6 +63,7 @@ char MAC_Addr[18];
 uint8_t Eth_Addressing[1];
 
 char mac_buffer[6];
+uint8_t buf[BUFSIZE];
 
 #define READ_ONLY  0
 #define READ_WRITE 1
@@ -115,6 +116,7 @@ Thread Temp_Control_thread(osPriorityNormal, 1200, NULL, "TEMP");
 Thread CLI_Proccess_Thread(osPriorityNormal, 1024, NULL, "CLI");
 Thread BSMP_Thread(osPriorityNormal, 800, NULL, "BSMP");
 
+Thread Eth_Thread(osPriorityNormal, 1536, NULL, "ETH");
 // Hardware Initialization - MBED
 
 // MBED Leds
@@ -505,90 +507,12 @@ void print_buffer( uint8_t *buf, int sz )
     printf("\r\n");
 }
 
-int main( void )
+void Eth_Handler( void )
 {
-    wdt.clear_overflow_flag();
-
-    //Init serial port for info printf
-    pc.baud(115200);
-
-    printf("Starting RFFEuC firmware "FW_VERSION" !\r\n\r\n");
-
-    bsmp = bsmp_server_new();
-
-    bsmp_register_hook(bsmp, bsmp_hook_signal_threads);
-
-    led1 = 1;
-    led_r = 0;
-
-    // Variables initialization
-    // Attenuators
-    //set_value(Att, 30.0);
-    // TempAC
-    set_value(TempAC, 0.0);
-    // TempBD
-    set_value(TempBD, 0.0);
-    // Set_PointAC
-    set_value(Set_PointAC, 51.5);
-    // Set_PointBD
-    set_value(Set_PointBD, 51.5);
-    // Temp_Control
-    set_value(Temp_Control, 0);
-    // HeaterAC
-    set_value(HeaterAC, 0.0);
-    // HeaterBD
-    set_value(HeaterBD, 0.0);
-    // Reset
-    set_value(Reset, 0);
-    // Reprogramming
-    set_value(Reprogramming, 0);
-    // Version
-    set_value(Version, FW_VERSION, sizeof(FW_VERSION));
-    //PID_AC Kc parameter
-    set_value(PID_AC_Kc, 10.5);
-    //PID_AC tauI parameter
-    set_value(PID_AC_tauI, 12);
-    //PID_AC tauI parameter
-    set_value(PID_AC_tauD, 2);
-    //PID_BD Kc parameter
-    set_value(PID_BD_Kc, 10.5);
-    //PID_BD tauI parameter
-    set_value(PID_BD_tauI, 12);
-    //PID_BD tauI parameter
-    set_value(PID_BD_tauD, 2);
-
-    feram.get_attenuation(Att);
-    feram.get_ip_addr(IP_Addr);
-    feram.get_gateway_addr(Gateway_Addr);
-    feram.get_mask_addr(Mask_Addr);
-    feram.get_mac_addr(MAC_Addr, mac_buffer);
-    feram.get_eth_addressing(Eth_Addressing);
-
-    printf("Ethernet configuration from FeRAM:\r\n");
-    printf("\tIP : %s\r\n", IP_Addr);
-    printf("\tMask : %s\r\n", Mask_Addr);
-    printf("\tGateway : %s\r\n", Gateway_Addr);
-    printf("\tMAC : %s\r\n", MAC_Addr);
-    printf("\r\n");
-
-    for ( uint8_t i = 0; i < sizeof(rffe_vars)/sizeof(rffe_vars[0]); i++) {
-        rffe_vars[i].info.id = i;
-        bsmp_register_variable( bsmp, &rffe_vars[i] );
-    }
-
-    set_value(Att, attenuators_update(get_value64(Att)));
-
-    // *************************************Threads***************************************
-    Temp_Control_thread.start(Temp_Feedback_Control);
-    CLI_Proccess_Thread.start(CLI_Proccess);
-    BSMP_Thread.start(bsmp_dispatcher);
-
     uint8_t state = 0;
     uint32_t last_page_addr, next_sector;
     bool full_page = false, sector_erased = false;
     uint8_t v_major = 0, v_minor = 0, v_patch = 0;
-
-    uint8_t buf[BUFSIZE];
 
     led2 = !pll.cfg_eth();
 
@@ -840,4 +764,91 @@ int main( void )
         server.close();
         net.disconnect();
     }
+}
+
+int main( void )
+{
+    wdt.clear_overflow_flag();
+
+    //Init serial port for info printf
+    pc.baud(115200);
+
+    printf("Starting RFFEuC firmware "FW_VERSION" !\r\n\r\n");
+
+    bsmp = bsmp_server_new();
+
+    bsmp_register_hook(bsmp, bsmp_hook_signal_threads);
+
+    led1 = 1;
+    led_r = 0;
+
+    // Variables initialization
+    // Attenuators
+    //set_value(Att, 30.0);
+    // TempAC
+    set_value(TempAC, 0.0);
+    // TempBD
+    set_value(TempBD, 0.0);
+    // Set_PointAC
+    set_value(Set_PointAC, 51.5);
+    // Set_PointBD
+    set_value(Set_PointBD, 51.5);
+    // Temp_Control
+    set_value(Temp_Control, 0);
+    // HeaterAC
+    set_value(HeaterAC, 0.0);
+    // HeaterBD
+    set_value(HeaterBD, 0.0);
+    // Reset
+    set_value(Reset, 0);
+    // Reprogramming
+    set_value(Reprogramming, 0);
+    // Version
+    set_value(Version, FW_VERSION, sizeof(FW_VERSION));
+    //PID_AC Kc parameter
+    set_value(PID_AC_Kc, 10.5);
+    //PID_AC tauI parameter
+    set_value(PID_AC_tauI, 12);
+    //PID_AC tauI parameter
+    set_value(PID_AC_tauD, 2);
+    //PID_BD Kc parameter
+    set_value(PID_BD_Kc, 10.5);
+    //PID_BD tauI parameter
+    set_value(PID_BD_tauI, 12);
+    //PID_BD tauI parameter
+    set_value(PID_BD_tauD, 2);
+
+    feram.get_attenuation(Att);
+    feram.get_ip_addr(IP_Addr);
+    feram.get_gateway_addr(Gateway_Addr);
+    feram.get_mask_addr(Mask_Addr);
+    feram.get_mac_addr(MAC_Addr, mac_buffer);
+    feram.get_eth_addressing(Eth_Addressing);
+
+    printf("Ethernet configuration from FeRAM:\r\n");
+    printf("\tIP : %s\r\n", IP_Addr);
+    printf("\tMask : %s\r\n", Mask_Addr);
+    printf("\tGateway : %s\r\n", Gateway_Addr);
+    printf("\tMAC : %s\r\n", MAC_Addr);
+    printf("\r\n");
+
+    for ( uint8_t i = 0; i < sizeof(rffe_vars)/sizeof(rffe_vars[0]); i++) {
+        rffe_vars[i].info.id = i;
+        bsmp_register_variable( bsmp, &rffe_vars[i] );
+    }
+
+    set_value(Att, attenuators_update(get_value64(Att)));
+
+    // *************************************Threads***************************************
+    Temp_Control_thread.start(Temp_Feedback_Control);
+    CLI_Proccess_Thread.start(CLI_Proccess);
+    BSMP_Thread.start(bsmp_dispatcher);
+    Eth_Thread.start(Eth_Handler);
+
+
+    /* Should never get here, but wait for all threads to die */
+    Temp_Control_thread.join();
+    CLI_Proccess_Thread.join();
+    BSMP_Thread.join();
+    Eth_Thread.join();
 }

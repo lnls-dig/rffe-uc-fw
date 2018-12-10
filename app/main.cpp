@@ -595,7 +595,7 @@ int main( void )
     int err, link;
 
     while (true) {
-        printf("Trying to bring up ethernet connection...\r\n");
+        printf("[ETHERNET] Trying to bring up connection...\r\n");
         led_r = 1;
 
         if (get_value8(Eth_Addressing)) {
@@ -646,7 +646,7 @@ int main( void )
             set_value(Gateway_Addr, net.get_gateway(), sizeof(Gateway_Addr));
             set_value(Mask_Addr, net.get_netmask(), sizeof(Mask_Addr));
 
-            printf("Ethernet configs from DHCP:\r\n");
+            printf("[ETHERNET] Configs from DHCP:\r\n");
             printf("\tIP: %s\r\n", IP_Addr);
             printf("\tNetmask: %s\r\n", Mask_Addr);
             printf("\tGateway: %s\r\n", Gateway_Addr);
@@ -713,11 +713,11 @@ int main( void )
                 }
 
 #ifdef DEBUG_PRINTF
-                printf("Received message of %d bytes: ", recv_sz);
                 for (int i = 0; i < recv_sz; i++) {
                     printf("0x%X ",buf[i]);
                 }
                 printf("\r\n");
+                printf("[ETHERNET] Received message of %d bytes:\r\n\t", recv_sz);
 #endif
                 bsmp_mail_t *mail = bsmp_mail_box.alloc();
 
@@ -739,17 +739,17 @@ int main( void )
                 sent_sz = client.send((char*)response_mail->data, response_mail->len);
 
 #ifdef DEBUG_PRINTF
-                printf("Sending message of %d bytes: ", sent_sz);
                 for (int i = 0; i < sent_sz; i++) {
                     printf("0x%X ",response_mail->data[i]);
                 }
                 printf("\r\n");
+                printf("[ETHERNET] Sending message of %d bytes:\r\n\t", sent_sz);
 #endif
                 free(response_mail->data);
                 eth_mail_box.free(response_mail);
 
                 if (sent_sz <= 0) {
-                    printf("ERROR while writing to socket!\r\n");
+                    printf("[ETHERNET] Error while writing to socket: %d\r\n", sent_sz);
                     continue;
                 }
 

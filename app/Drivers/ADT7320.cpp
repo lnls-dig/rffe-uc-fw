@@ -12,7 +12,7 @@ double ADT7320::Read()
     _spi.format(16,3);
 
     _cs = 0;
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
     // Select Temperature value register
     _spi.write(0x0050);
     data = _spi.write(0x0000);
@@ -42,16 +42,16 @@ void ADT7320::Config( int freq, int res, int cfg )
     /* Reseting SPI interface - Write 32 1's to the IC */
     _spi.format(16,3);
     _cs = 0;
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
     _spi.write(0xFFFF);
     _spi.write(0xFFFF);
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
     _cs = 1;
 
     // Configuration process
     _spi.format(8,3);
     _cs = 0;
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
 
     // Select CONFIGURATION REGISTER – 0x01
     _spi.write(0x08);
@@ -64,9 +64,9 @@ void ADT7320::Config( int freq, int res, int cfg )
 
     _spi.write( cfg_byte );
 
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
     _cs = 1;
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
 }
 
 void ADT7320::SetRange( double min, double max )

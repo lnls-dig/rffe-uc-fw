@@ -24,10 +24,10 @@ void DAC7554::Write( double vout )
 
     // Transmition
     _cs = 0;
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
     // control - write data to voutA
     _spi.write( cfg );
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
     _cs = 1;
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
 }

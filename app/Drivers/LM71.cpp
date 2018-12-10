@@ -12,7 +12,7 @@ double LM71::Read()
     _spi.format(16,0);
 
     _cs = 0;
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
     // Select Temperature value register
     data = _spi.write(0x0000);
     _cs = 1;
@@ -45,13 +45,13 @@ int LM71::Config( int freq, lm71_mode_t mode )
 
     if (_mode == LM71_MODE_CONVERSION) {
         _cs = 0;
-        Thread::wait(1);
+        ThisThread::sleep_for(1);
         _spi.write(0x0000);
         _spi.write(0x0000);
         _cs = 1;
     } else if (_mode == LM71_MODE_SHUTDOWN) {
         _cs = 0;
-        Thread::wait(1);
+        ThisThread::sleep_for(1);
         _spi.write(0xFFFF);
         _spi.write(0xFFFF);
         _cs = 1;
@@ -68,7 +68,7 @@ uint16_t LM71::ReadID( void )
     _mode = LM71_MODE_SHUTDOWN;
 
     _cs = 0;
-    Thread::wait(1);
+    ThisThread::sleep_for(1);
     uint16_t id = _spi.write(0xFFFF);
     _cs = 1;
 

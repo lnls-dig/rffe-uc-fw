@@ -112,11 +112,11 @@ Watchdog wdt;
 bsmp_server_t *bsmp;
 
 // Threads
-Thread Temp_Control_thread(osPriorityNormal, 1200, NULL, "TEMP");
+Thread Temp_Control_thread(osPriorityNormal, 1280, NULL, "TEMP");
 Thread CLI_Proccess_Thread(osPriorityNormal, 1024, NULL, "CLI");
-Thread BSMP_Thread(osPriorityNormal, 800, NULL, "BSMP");
-
+Thread BSMP_Thread(osPriorityNormal, 1024, NULL, "BSMP");
 Thread Eth_Thread(osPriorityNormal, 1536, NULL, "ETH");
+
 // Hardware Initialization - MBED
 
 // MBED Leds

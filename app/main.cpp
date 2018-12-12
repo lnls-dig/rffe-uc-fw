@@ -512,7 +512,7 @@ void Eth_Handler( void )
     uint8_t state = 0;
     uint32_t last_page_addr, next_sector;
     bool full_page = false, sector_erased = false;
-    uint8_t v_major = 0, v_minor = 0, v_patch = 0;
+    uint8_t v_major = 0, v_minor = 0, v_patch = 0, fw_type = 0;
 
     led2 = !pll.cfg_eth();
 
@@ -682,13 +682,18 @@ void Eth_Handler( void )
                 if (state != get_value8(Reprogramming)) {
                     switch (get_value8(Reprogramming)) {
                     case 1:
+                        sector_erased = false;
+
                         /* Read new firmware version */
                         v_major = Data[0];
                         v_minor = Data[1];
                         v_patch = Data[2];
+                        /* Read which firmware will be sent: [1] - Application; [2] - Bootloader */
+                        fw_type = Data[3];
 
-                        sector_erased = false;
-                        last_page_addr = (APPLICATION_ADDR + APPLICATION_SIZE);
+                        /* Bootloader first page address on EEPROM: (0) */
+                        last_page_addr = (fw_type == 2) ? (0) : (APPLICATION_ADDR + APPLICATION_SIZE);
+
                         next_sector = last_page_addr + flash.get_sector_size(last_page_addr);
                         memset(fw_buffer, 0xFF, sizeof(fw_buffer));
                         break;
@@ -702,11 +707,12 @@ void Eth_Handler( void )
                         fw_buffer[248] = v_major;
                         fw_buffer[249] = v_minor;
                         fw_buffer[250] = v_patch;
+                        fw_buffer[251] = fw_type;
 
                         /* Write the bootloader magic word in the last 4 bytes of the page */
                         const uint32_t magic_word[] = {0xAAAAAAAA};
 
-                        printf("Writing bootloader magic word at 0x%lX\r\n", magic_addr + 252);
+                        printf("[REPROGRAM] Writing bootloader magic word at 0x%lX\r\n", magic_addr + 252);
                         memcpy(&fw_buffer[252], magic_word, sizeof(magic_word));
 
                         /* Write back to flash */

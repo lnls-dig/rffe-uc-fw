@@ -8,7 +8,13 @@ FlashIAP flash;
 const uint32_t page_size = flash.get_page_size();
 const uint32_t flash_size = flash.get_flash_size();
 
-void update(uint32_t address)
+typedef struct {
+    uint8_t version[3];
+    uint8_t fw_type;
+    uint32_t upgr_fw_id;
+} fw_info;
+
+void update( uint32_t address )
 {
     char *page_buffer = new char[page_size];
     uint32_t addr = address;
@@ -48,23 +54,31 @@ void update(uint32_t address)
     delete[] page_buffer;
 }
 
-int main (void)
+int main( void )
 {
-    uint32_t upgr_fw_id;
-
-    uint8_t version[3] = {0};
+    fw_info header;
 
     flash.init();
 
     pc.baud(115200);
 
-    flash.read(&upgr_fw_id, (flash_size - 4), 4);
-    flash.read(version, (flash_size - 8), 3);
+    flash.read(&header, (flash_size - sizeof(fw_info)), sizeof(fw_info));
 
-    if(upgr_fw_id == BOOTLOADER_MAGIC_WORD) {
-        printf("Updating firmware to new version %d.%d.%d\r\n", version[0], version[1], version[2]);
-        update(POST_APPLICATION_ADDR);
-        printf("Update finished!\r\n");
+    if(header.upgr_fw_id == BOOTLOADER_MAGIC_WORD) {
+        if (header.fw_type == 1) {
+            printf("[BOOTLOADER] Updating firmware to new version %d.%d.%d\r\n", header.version[0], header.version[1], header.version[2]);
+            update(POST_APPLICATION_ADDR);
+        } else if (header.fw_type == 2) {
+            printf("[BOOTLOADER] New bootloader firmware was sent! Erasing the temporary data\r\n");
+            /* Erase the update sector of the Flash */
+            uint32_t src = UPDATE_ADDRESS_OFFSET;
+            while (src < flash_size) {
+                flash.erase(src, flash.get_sector_size(src));
+                src += flash.get_sector_size(src);
+            }
+        } else {
+            printf("[BOOTLOADER] Unknown firmware type, ignoring\r\n");
+        }
     }
 
     flash.deinit();

@@ -1,0 +1,7 @@
+{
+    "target_overrides": {
+        "*": {
+            "target.restrict_size": "0x10000"
+        }
+    }
+}

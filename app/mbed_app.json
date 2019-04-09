@@ -1,4 +1,16 @@
 {
+    "config": {
+        "Temperature_Sensor": {
+            "help": "Select temperature sensor being used in the control board (0: LM71; 1: ADT7320)",
+            "macro_name": "TEMP_SENSOR",
+            "value": 0
+        },
+
+        "main-stack-size": {
+            "value": 1024
+        }
+    },
+
     "target_overrides": {
         "*": {
             "target.restrict_size": "0x38000",

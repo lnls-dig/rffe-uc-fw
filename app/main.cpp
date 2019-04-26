@@ -499,9 +499,9 @@ void bsmp_dispatcher( void )
     }
 }
 
-void print_buffer( uint8_t *buf, int sz )
+void print_buffer( uint8_t *buf, size_t sz )
 {
-    for (int i = 0; i < sz; i++) {
+    for (size_t i = 0; i < sz; i++) {
         printf("0x%X ",buf[i]);
     }
     printf("\r\n");

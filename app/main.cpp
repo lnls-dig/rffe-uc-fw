@@ -676,7 +676,7 @@ void Eth_Handler( void )
 
                 if (sent_sz <= 0) {
                     printf("[ETHERNET] Error while writing to socket: %d\r\n", sent_sz);
-                    continue;
+                    break;
                 }
 
                 if (state != get_value8(Reprogramming)) {

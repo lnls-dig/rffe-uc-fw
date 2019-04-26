@@ -629,7 +629,7 @@ void Eth_Handler( void )
                     if (payload_len > 0) {
                         recv_sz += client.recv( (char*) &buf[3], payload_len );
                     }
-                } else if (recv_sz == -3001) {
+                } else if (recv_sz == NSAPI_ERROR_WOULD_BLOCK) {
                     /* Would block */
                     continue;
                 } else if (recv_sz < 0) {

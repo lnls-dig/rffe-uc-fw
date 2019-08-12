@@ -35,5 +35,5 @@
 ############################################################################
 
 ifneq ($(CONFIG_EXAMPLES_RFFE),)
-CONFIGURED_APPS += examples/rffe
+CONFIGURED_APPS += external
 endif

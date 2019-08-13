@@ -1,0 +1,26 @@
+def rst
+	monitor reset halt
+end
+
+def start_timer
+	set *(unsigned int*)0xE000EDFC |= 0x01000000
+	set *(unsigned int*)0xE0001004 = 0
+	set *(unsigned int*)0xE0001000 = 1
+end
+
+def read_timer
+	p *(unsigned int*)0xE0001004
+end
+
+def ldr
+	load
+	rst
+end
+
+def ldrc
+	load
+	rst
+	c
+end
+
+target remote localhost:3333

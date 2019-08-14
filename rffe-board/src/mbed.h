@@ -60,9 +60,13 @@
 #define MBED_LED3_ON          (MBED_LED3 | GPIO_VALUE_ONE)
 #define MBED_LED4             (GPIO_OUTPUT | GPIO_PORT1 | GPIO_PIN23)
 #define MBED_LED4_OFF         MBED_LED4
-#define MBED_LED4_ON          (MBED_LED 4| GPIO_VALUE_ONE)
+#define MBED_LED4_ON          (MBED_LED4 | GPIO_VALUE_ONE)
 
 #define MBED_HEARTBEAT        MBED_LED4
+
+#define CS_ADT7320_AC (GPIO_OUTPUT | GPIO_VALUE_ONE | GPIO_PORT2 | GPIO_PIN1)
+#define CS_ADT7320_BD (GPIO_OUTPUT | GPIO_VALUE_ONE | GPIO_PORT0 | GPIO_PIN16)
+#define CS_DAC7554    (GPIO_OUTPUT | GPIO_VALUE_ONE | GPIO_PORT0 | GPIO_PIN24)
 
 /************************************************************************************
  * Public Types

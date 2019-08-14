@@ -124,8 +124,10 @@
 
 /* Ethernet configuration */
 
-//#define ETH_MCFG_CLKSEL_DIV ETH_MCFG_CLKSEL_DIV44
-#define ETH_MCFG_CLKSEL_DIV ETH_MCFG_CLKSEL_DIV20
+/*
+ * MDC clock = 80MHz/40 = 2MHz
+ */
+#define ETH_MCFG_CLKSEL_DIV ETH_MCFG_CLKSEL_DIV40
 
 /* LED definitions ******************************************************************/
 /* The RFFE has 4 LEDs along the bottom of the board. Blue or off.
@@ -150,22 +152,17 @@
 #define LED_ASSERTION              6  /*  NC     NC    NC   ON  (momentary) */
 #define LED_PANIC                  7  /*  NC     NC    NC   ON  (1Hz flashing) */
 
-
-#define GPIO_SSP0_SCK              GPIO_SSP0_SCK_1
-#define GPIO_SSP0_SSEL             GPIO_SSP0_SSEL_1
-#define GPIO_SSP0_MISO             GPIO_SSP0_MISO_1
-#define GPIO_SSP0_MOSI             GPIO_SSP0_MOSI_1
-
-/* We need to redefine USB_PWRD as GPIO to get USB Host working
- * Also remember to add 2 resistors of 15K to D+ and D- pins.
+/*
+ * Configure SSP1:
+ * P0.6 = SSEL;
+ * P0.7 = SCK;
+ * P0.8 = MISO;
+ * P0.9 = MOSI;
  */
-
-#ifdef CONFIG_USBHOST
-#  ifdef GPIO_USB_PWRD
-#    undef  GPIO_USB_PWRD
-#    define GPIO_USB_PWRD    (GPIO_INPUT | GPIO_PORT1 | GPIO_PIN22)
-#  endif
-#endif
+#define GPIO_SSP1_SCK              GPIO_SSP1_SCK_1
+// #define GPIO_SSP1_SSEL             GPIO_SSP1_SSEL_1
+// #define GPIO_SSP1_MISO             GPIO_SSP1_MISO_1
+// #define GPIO_SSP1_MOSI             GPIO_SSP1_MOSI_1
 
 /* Alternate pin selections *********************************************************/
 /* Pin Description                  Connector On Board       Base Board
@@ -204,15 +201,10 @@
 #define GPIO_I2C1_SDA      GPIO_I2C1_SDA_2
 #define GPIO_UART3_RXD     GPIO_UART3_RXD_1
 #define GPIO_I2C1_SCL      GPIO_I2C1_SCL_2
-#define GPIO_SSP1_SCK      GPIO_SSP1_SCK_1
 #define GPIO_UART2_TXD     GPIO_UART2_TXD_1
 #define GPIO_UART2_RXD     GPIO_UART2_RXD_1
 #define GPIO_UART1_TXD     GPIO_UART1_TXD_1
-#define GPIO_SSP0_SCK      GPIO_SSP0_SCK_1
 #define GPIO_UART1_RXD     GPIO_UART1_RXD_1
-#define GPIO_SSP0_SSEL     GPIO_SSP0_SSEL_1
-#define GPIO_SSP0_MISO     GPIO_SSP0_MISO_1
-#define GPIO_SSP0_MOSI     GPIO_SSP0_MOSI_1
 
 /* P1[0]/ENET-TXD0                   J6-34?  TXD0            TX-(Ethernet PHY)
  * P1[1]/ENET_TXD1                   J6-35?  TXD1            TX+(Ethernet PHY)

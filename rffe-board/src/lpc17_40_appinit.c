@@ -45,30 +45,38 @@
 
 #include <nuttx/board.h>
 #include <nuttx/spi/spi.h>
-#include <nuttx/mmcsd.h>
+#include <nuttx/sensors/adt7320.h>
+
+#include "lpc17_40_gpio.h"
+#include "lpc17_40_ssp.h"
 
 #include "mbed.h"
+
+void lpc17_40_ssp1select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected)
+{
+  switch (devid)
+  {
+  case SPIDEV_TEMPERATURE(0):
+    lpc17_40_gpiowrite(CS_ADT7320_AC, !selected);
+    break;
+
+  case SPIDEV_TEMPERATURE(1):
+    lpc17_40_gpiowrite(CS_ADT7320_BD, !selected);
+    break;
+
+  default:
+    break;
+  }
+}
+
+uint8_t lpc17_40_ssp1status(FAR struct spi_dev_s *dev, uint32_t devid)
+{
+  return 0;
+}
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/* Configuration ************************************************************/
-
-/* PORT and SLOT number probably depend on the board configuration */
-
-/* #ifdef CONFIG_ARCH_BOARD_RFFE */
-/* #  define NSH_HAVEUSBDEV 1 */
-/* #else */
-/* #  error "Unrecognized board" */
-/* #  undef NSH_HAVEUSBDEV */
-/* #endif */
-
-/* Can't support USB features if USB is not enabled */
-
-#ifndef CONFIG_USBDEV
-#  undef NSH_HAVEUSBDEV
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -100,26 +108,17 @@
 int board_app_initialize(uintptr_t arg)
 {
   int ret;
+  
+  struct spi_dev_s *ssp1;
 
-#ifdef CONFIG_PWM
-  /* Initialize PWM and register the PWM device. */
+  lpc17_40_configgpio(CS_ADT7320_AC);
+  lpc17_40_configgpio(CS_ADT7320_BD);
+  lpc17_40_configgpio(CS_DAC7554);
 
-  ret = mbed_pwm_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: mbed_pwm_setup() failed: %d\n", ret);
-    }
-#endif
+  ssp1 = lpc17_40_sspbus_initialize(1);
 
-#ifdef CONFIG_ADC
-  /* Initialize ADC and register the ADC driver. */
-
-  ret = mbed_adc_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: mbed_adc_setup failed: %d\n", ret);
-    }
-#endif
+  adt7320_register("/dev/temp_ac", ssp1, SPIDEV_TEMPERATURE(0));
+  adt7320_register("/dev/temp_bd", ssp1, SPIDEV_TEMPERATURE(1));
 
   UNUSED(ret);
   return OK;

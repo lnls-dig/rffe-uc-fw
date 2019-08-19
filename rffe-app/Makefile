@@ -48,7 +48,7 @@ STACKSIZE = $(CONFIG_EXAMPLES_RFFE_STACKSIZE)
 # Rffe, World! Example
 
 ASRCS =
-CSRCS =
+CSRCS = cdce906.c netconfig.c
 MAINSRC = rffe_main.c
 
 CONFIG_EXAMPLES_RFFE_PROGNAME ?= rffe$(EXEEXT)

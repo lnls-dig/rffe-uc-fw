@@ -11,19 +11,19 @@
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Foobar is distributed in the hope that it will be useful,
+ * RFFE is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
+ * along with RFFE.  If not, see <https://www.gnu.org/licenses/>.
  *
  ****************************************************************************/
 
-/****************************************************************************
- * Included Files
- ****************************************************************************/
+/*
+ * Headers
+ */
 
 #include <nuttx/config.h>
 #include <nuttx/sensors/ioctl.h>
@@ -34,13 +34,15 @@
 #include <unistd.h>
 #include <fixedmath.h>
 
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
+#include "netutils/netlib.h"
+#include "netutils/dhcpc.h"
 
-/****************************************************************************
- * hello_main
- ****************************************************************************/
+#include "cdce906.h"
+#include "netconfig.h"
+
+/*
+ * Main function
+ */
 
 #if defined(BUILD_MODULE)
 int main(int argc, FAR char *argv[])
@@ -48,45 +50,37 @@ int main(int argc, FAR char *argv[])
 int rffe_main(int argc, char *argv[])
 #endif
 {
-  if (argc != 2) {
-    printf("Invalid arguments.\n");
-    return 1;
-  }
+    int ret;
+    struct netifconfig conf;
 
-  int fd = open(argv[1], O_RDONLY);
-  uint8_t temp_raw[4];
+    /*
+     * Initialize the ethernet PHY PLL (50MHz)
+     */
+    ret = cdce906_init("/dev/i2c0");
+    if (ret < 0)
+    {
+        printf("ERROR: PLL couldn't be initialized!\n");
+        return -1;
+    }
 
-  if(fd < 0)
-  {
-    printf("File not found.\n");
-    return 2;
-  }
+    /*
+     * Read the mac address from the FeRAM
+     */
+    int eeprom_fd = open("/dev/feram0", O_RDONLY);
+    read(eeprom_fd, conf.mac, 6);
 
-  read(fd, temp_raw, 4);
+    printf("Configuring network...\n");
 
-  printf("Temperature: %d.%d\n", temp_raw[2], (temp_raw[1] * 10) / 256);
+    conf.default_router.s_addr = 0;
+    conf.dnsaddr.s_addr = 0;
+    conf.ipaddr.s_addr = 0;
+    conf.netmask.s_addr = 0x00FFFFFF;
 
-  b16_t temp;
+    /*
+     * Configure the network interface, use DHCP
+     */
+    netconfig("eth0", &conf, 1);
+    print_netconfig(&conf);
 
-  ioctl(fd, SNIOC_READTCRIT, (unsigned long)&temp);
-  printf("Critical temperature: %08X\n", temp);
-
-  ioctl(fd, SNIOC_READTLOW, (unsigned long)&temp);
-  printf("Low temperature: %08X\n", temp);
-
-  ioctl(fd, SNIOC_READTHIGH, (unsigned long)&temp);
-  printf("High temperature: %08X\n", temp);
-
-  ioctl(fd, SNIOC_READTHYS, (unsigned long)&temp);
-  printf("Hysteresis temperature: %08X\n", temp);
-
-  uint8_t conf;
-  ioctl(fd, SNIOC_READCONF, (unsigned long)&conf);
-  printf("Configuration: %02X\n", conf);
-
-  ioctl(fd, SNIOC_READSTAT, (unsigned long)&conf);
-  printf("Status: %02X\n", conf);
-
-  close(fd);
-  return 0;
+    return 0;
 }

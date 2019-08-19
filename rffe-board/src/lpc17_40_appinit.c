@@ -46,9 +46,12 @@
 #include <nuttx/board.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/sensors/adt7320.h>
+#include <nuttx/i2c/i2c_master.h>
+#include <nuttx/eeprom/i2c_xx24xx.h>
 
 #include "lpc17_40_gpio.h"
 #include "lpc17_40_ssp.h"
+#include "lpc17_40_i2c.h"
 
 #include "mbed.h"
 
@@ -108,12 +111,39 @@ uint8_t lpc17_40_ssp1status(FAR struct spi_dev_s *dev, uint32_t devid)
 int board_app_initialize(uintptr_t arg)
 {
   int ret;
-  
+
+  struct i2c_master_s *i2c0, *i2c1;
   struct spi_dev_s *ssp1;
 
   lpc17_40_configgpio(CS_ADT7320_AC);
   lpc17_40_configgpio(CS_ADT7320_BD);
   lpc17_40_configgpio(CS_DAC7554);
+
+  i2c0 = lpc17_40_i2cbus_initialize(0);
+  if (i2c0 == NULL)
+  {
+    syslog(LOG_ERR, "ERROR: Failed to get the i2c0 interface\n");
+  }
+  else
+  {
+    /* Create the /dev/i2c0 character device */
+    i2c_register(i2c0, 0);
+  }
+
+  i2c1 = lpc17_40_i2cbus_initialize(1);
+  if (i2c1 == NULL)
+  {
+    syslog(LOG_ERR, "ERROR: Failed to get the i2c0 interface\n");
+  }
+  else
+  {
+    /* Associate the FeRAM under the i2c1 bus to /dev/feram0 */
+    ret = ee24xx_initialize(i2c1, 0x50, "/dev/feram0", EEPROM_24xx16, 0);
+    if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize the feram\n");
+    }
+  }
 
   ssp1 = lpc17_40_sspbus_initialize(1);
 

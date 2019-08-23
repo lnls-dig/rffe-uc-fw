@@ -26,19 +26,17 @@
  */
 
 #include <nuttx/config.h>
-#include <nuttx/sensors/ioctl.h>
-#include <sys/ioctl.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <fixedmath.h>
 
 #include "netutils/netlib.h"
 #include "netutils/dhcpc.h"
 
 #include "cdce906.h"
 #include "netconfig.h"
+#include "scpi_server.h"
 
 /*
  * Main function
@@ -68,6 +66,7 @@ int rffe_main(int argc, char *argv[])
      */
     int eeprom_fd = open("/dev/feram0", O_RDONLY);
     read(eeprom_fd, conf.mac, 6);
+    close(eeprom_fd);
 
     printf("Configuring network...\n");
 
@@ -81,6 +80,8 @@ int rffe_main(int argc, char *argv[])
      */
     netconfig("eth0", &conf, 1);
     print_netconfig(&conf);
+
+    scpi_server_start();
 
     return 0;
 }

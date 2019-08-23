@@ -48,11 +48,19 @@ STACKSIZE = $(CONFIG_EXAMPLES_RFFE_STACKSIZE)
 # Rffe, World! Example
 
 ASRCS =
-CSRCS = cdce906.c netconfig.c
+CSRCS = cdce906.c netconfig.c scpi_server.c scpi_tables.c scpi_rffe_cmd.c scpi_interface.c \
+	$(addprefix ./libscpi/src/, \
+	error.c fifo.c ieee488.c \
+	minimal.c parser.c units.c utils.c \
+	lexer.c expression.c \
+	)
 MAINSRC = rffe_main.c
 
 CONFIG_EXAMPLES_RFFE_PROGNAME ?= rffe$(EXEEXT)
 PROGNAME = $(CONFIG_EXAMPLES_RFFE_PROGNAME)
+
+CXXFLAGS += -I ./libscpi/inc/
+CFLAGS += -I ./libscpi/inc/
 
 MODULE = CONFIG_EXAMPLES_RFFE
 

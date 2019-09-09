@@ -23,30 +23,51 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <fixedmath.h>
+
+#include <sys/ioctl.h>
+#include <nuttx/rf/ioctl.h>
+#include <nuttx/rf/attenuator.h>
 
 #include "scpi_rffe_cmd.h"
 
 scpi_result_t rffe_measure_temp_ac(scpi_t * context)
 {
-    uint8_t temp_raw[4];
+    b16_t temp;
 
     int fd = open("/dev/temp_ac", O_RDONLY);
-    read(fd, temp_raw, 4);
+    read(fd, &temp, 4);
     close(fd);
 
-    SCPI_ResultDouble(context, (temp_raw[1] + (temp_raw[2] << 8)) / 256.0);
+    SCPI_ResultDouble(context, b16tof(temp));
     return SCPI_RES_OK;
 }
 
 scpi_result_t rffe_measure_temp_bd(scpi_t * context)
 {
-    uint8_t temp_raw[4];
+    b16_t temp;
 
     int fd = open("/dev/temp_bd", O_RDONLY);
-    read(fd, temp_raw, 4);
+    read(fd, &temp, 4);
     close(fd);
 
-    SCPI_ResultDouble(context, (temp_raw[1] + (temp_raw[2] << 8)) / 256.0);
+    SCPI_ResultDouble(context, b16tof(temp));
+    return SCPI_RES_OK;
+}
+
+scpi_result_t rffe_set_attenuation(scpi_t * context)
+{
+    struct attenuator_control att;
+    scpi_number_t par;
+
+    SCPI_ParamNumber(context, scpi_special_numbers_def, &par, TRUE);
+
+    att.attenuation = ftob16(par.content.value);
+
+    int fd = open("/dev/att0", O_RDONLY);
+    ioctl(fd, RFIOC_SETATT, (unsigned long)&att);
+    close(fd);
+
     return SCPI_RES_OK;
 }
 

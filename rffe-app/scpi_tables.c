@@ -56,6 +56,7 @@ const scpi_command_t scpi_commands[] =
 	 */
     {.pattern = "MEASure:TEMPerature:AC?", .callback = rffe_measure_temp_ac,},
     {.pattern = "MEASure:TEMPerature:BD?", .callback = rffe_measure_temp_bd,},
+    {.pattern = "SET:ATTEnuation", .callback = rffe_set_attenuation,},
 
     SCPI_CMD_LIST_END
 };

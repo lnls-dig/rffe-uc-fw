@@ -45,16 +45,81 @@
 
 #include <nuttx/board.h>
 #include <nuttx/spi/spi.h>
+#include <nuttx/spi/spi_bitbang.h>
 #include <nuttx/analog/dac.h>
 #include <nuttx/sensors/adt7320.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/eeprom/i2c_xx24xx.h>
+#include <nuttx/rf/dat-31r5-sp.h>
 
 #include "lpc17_40_gpio.h"
 #include "lpc17_40_ssp.h"
 #include "lpc17_40_i2c.h"
 
 #include "mbed.h"
+
+static void spi_bitbang_set_mosi(void)
+{
+  lpc17_40_gpiowrite(DATA_A_DAT31R5SP, 1);
+  lpc17_40_gpiowrite(DATA_B_DAT31R5SP, 1);
+  lpc17_40_gpiowrite(DATA_C_DAT31R5SP, 1);
+  lpc17_40_gpiowrite(DATA_D_DAT31R5SP, 1);
+}
+
+static void spi_bitbang_clear_mosi(void)
+{
+  lpc17_40_gpiowrite(DATA_A_DAT31R5SP, 0);
+  lpc17_40_gpiowrite(DATA_B_DAT31R5SP, 0);
+  lpc17_40_gpiowrite(DATA_C_DAT31R5SP, 0);
+  lpc17_40_gpiowrite(DATA_D_DAT31R5SP, 0);
+}
+
+#define SPI_SETSCK  lpc17_40_gpiowrite(CLK_DAT31R5SP, 1)
+#define SPI_CLRSCK  lpc17_40_gpiowrite(CLK_DAT31R5SP, 0)
+#define SPI_SETMOSI spi_bitbang_set_mosi()
+#define SPI_CLRMOSI spi_bitbang_clear_mosi()
+#define SPI_GETMISO (0)
+
+#define SPI_BITBAND_LOOPSPERMSEC CONFIG_BOARD_LOOPSPERMSEC
+
+#define SPI_PERBIT_NSEC      100
+
+#include <nuttx/spi/spi_bitbang.c>
+
+static void spi_select(FAR struct spi_bitbang_s *priv, uint32_t devid,
+                       bool selected)
+{
+  switch (devid)
+  {
+  case SPIDEV_USER(1):
+    /* When selected is true, LE = 1, otherwise LE = 0 */
+    lpc17_40_gpiowrite(LE_DAT31R5SP, selected);
+    break;
+
+  default:
+    break;
+  }
+}
+
+static uint8_t spi_status(FAR struct spi_bitbang_s *priv, uint32_t devid)
+{
+  if (devid == SPIDEV_USER(1))
+    {
+      return SPI_STATUS_PRESENT;
+    }
+
+  return 0;
+}
+
+#ifdef CONFIG_SPI_CMDDATA
+
+static int spi_cmddata(FAR struct spi_bitbang_s *priv, uint32_t devid,
+                       bool cmd)
+{
+  return OK;
+}
+
+#endif
 
 void lpc17_40_ssp1select(FAR struct spi_dev_s *dev, uint32_t devid, bool selected)
 {
@@ -66,6 +131,10 @@ void lpc17_40_ssp1select(FAR struct spi_dev_s *dev, uint32_t devid, bool selecte
 
   case SPIDEV_TEMPERATURE(1):
     lpc17_40_gpiowrite(CS_ADT7320_BD, !selected);
+    break;
+
+  case SPIDEV_USER(0):
+    lpc17_40_gpiowrite(CS_DAC7554, !selected);
     break;
 
   default:
@@ -114,12 +183,18 @@ int board_app_initialize(uintptr_t arg)
   int ret;
 
   struct i2c_master_s *i2c0, *i2c1;
-  struct spi_dev_s *ssp1;
+  struct spi_dev_s *ssp1, *spi_att;
   struct dac_dev_s *dac;
 
   lpc17_40_configgpio(CS_ADT7320_AC);
   lpc17_40_configgpio(CS_ADT7320_BD);
   lpc17_40_configgpio(CS_DAC7554);
+  lpc17_40_configgpio(LE_DAT31R5SP);
+  lpc17_40_configgpio(CLK_DAT31R5SP);
+  lpc17_40_configgpio(DATA_A_DAT31R5SP);
+  lpc17_40_configgpio(DATA_B_DAT31R5SP);
+  lpc17_40_configgpio(DATA_C_DAT31R5SP);
+  lpc17_40_configgpio(DATA_D_DAT31R5SP);
 
   i2c0 = lpc17_40_i2cbus_initialize(0);
   if (i2c0 == NULL)
@@ -154,6 +229,13 @@ int board_app_initialize(uintptr_t arg)
 
   dac = dac7554_initialize(ssp1, SPIDEV_USER(0));
   dac_register("/dev/dac0", dac);
+
+  spi_att = spi_create_bitbang(&g_spiops);
+
+  dat31r5sp_register("/dev/att0",
+                     spi_att,
+                     SPIDEV_USER(1));
+
   UNUSED(ret);
   return OK;
 }

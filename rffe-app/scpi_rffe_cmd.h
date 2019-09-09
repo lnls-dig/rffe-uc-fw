@@ -29,6 +29,7 @@
 
 scpi_result_t rffe_measure_temp_ac(scpi_t * context);
 scpi_result_t rffe_measure_temp_bd(scpi_t * context);
+scpi_result_t rffe_set_attenuation(scpi_t * context);
 scpi_result_t rffe_self_test(scpi_t * context);
 
 #endif

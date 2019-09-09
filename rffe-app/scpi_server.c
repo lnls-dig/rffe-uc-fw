@@ -22,10 +22,12 @@
  ****************************************************************************/
 
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <pthread.h>
@@ -107,7 +109,7 @@ static void* handle_client(void* args)
         }
         else if (n < 0)
         {
-            printf("Thread %d, connection error\n", sockfd);
+            printf("Thread %d, connection error (%d)\n", sockfd, n);
             break;
         }
         printf("Thread %d, received: %s", sockfd, line);
@@ -133,6 +135,7 @@ int scpi_server_start(void)
      * Open a socket
      */
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
     memset(&serv_addr, 0, sizeof(serv_addr));
 
     serv_addr.sin_family = AF_INET;
@@ -147,6 +150,46 @@ int scpi_server_start(void)
     {
         clilen = sizeof(cli_addr);
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+
+        int value = TRUE;
+        setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, &value, sizeof(int));
+
+        struct timeval tv;
+        int ret;
+
+        value = TRUE;
+        ret = setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, &value, sizeof(int));
+        if (ret < 0)
+        {
+            fprintf(stderr, "setsockopt(SO_KEEPALIVE) failed: %d\n", ret);
+        }
+
+        tv.tv_sec  = 5;
+        tv.tv_usec = 0;
+
+        ret = setsockopt(newsockfd, SOL_TCP, TCP_KEEPIDLE, &tv, sizeof(struct timeval));
+        if (ret < 0)
+        {
+            fprintf(stderr, "setsockopt(TCP_KEEPIDLE) failed: %d\n", ret);
+        }
+
+        tv.tv_sec  = 1;
+        tv.tv_usec = 0;
+
+        ret = setsockopt(newsockfd, SOL_TCP, TCP_KEEPINTVL, &tv, sizeof(struct timeval));
+        if (ret < 0)
+        {
+            fprintf(stderr, "setsockopt(TCP_KEEPIDLE) failed: %d\n", ret);
+        }
+
+        value = 3;
+        ret = setsockopt(newsockfd, SOL_TCP, TCP_KEEPCNT, &value, sizeof(int));
+
+        if (ret < 0)
+        {
+            fprintf(stderr, "setsockopt(SO_KEEPALIVE) failed: %d\n", ret);
+        }
+
         if (active_threads < 4)
         {
             printf("New connection!\n");

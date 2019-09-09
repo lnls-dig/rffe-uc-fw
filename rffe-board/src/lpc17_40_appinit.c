@@ -45,6 +45,7 @@
 
 #include <nuttx/board.h>
 #include <nuttx/spi/spi.h>
+#include <nuttx/analog/dac.h>
 #include <nuttx/sensors/adt7320.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/eeprom/i2c_xx24xx.h>
@@ -114,6 +115,7 @@ int board_app_initialize(uintptr_t arg)
 
   struct i2c_master_s *i2c0, *i2c1;
   struct spi_dev_s *ssp1;
+  struct dac_dev_s *dac;
 
   lpc17_40_configgpio(CS_ADT7320_AC);
   lpc17_40_configgpio(CS_ADT7320_BD);
@@ -150,6 +152,8 @@ int board_app_initialize(uintptr_t arg)
   adt7320_register("/dev/temp_ac", ssp1, SPIDEV_TEMPERATURE(0));
   adt7320_register("/dev/temp_bd", ssp1, SPIDEV_TEMPERATURE(1));
 
+  dac = dac7554_initialize(ssp1, SPIDEV_USER(0));
+  dac_register("/dev/dac0", dac);
   UNUSED(ret);
   return OK;
 }

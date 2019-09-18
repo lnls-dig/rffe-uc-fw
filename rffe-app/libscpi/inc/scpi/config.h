@@ -236,7 +236,7 @@ extern "C" {
 #endif
 
 #if HAVE_SIGNBIT
-  #define SCPIDEFINE_signbit(n)                         signbit(n)
+  #define SCPIDEFINE_signbit(n)                         ((n)<0)
 #else
   #define SCPIDEFINE_signbit(n)                         ((n)<0)
 #endif

@@ -45,37 +45,10 @@
 
 static volatile int active_threads = 0;
 
-static int readline_tcp(int sockfd, char* str, int str_size)
-{
-    int str_ind = 0;
-    char c;
-
-    for (; str_ind < (str_size - 1); str_ind++)
-    {
-        int n = read(sockfd, &c, 1);
-        if (n < 1)
-        {
-            str[str_ind] = 0;
-            return n;
-        }
-
-        str[str_ind] = c;
-
-        if (c == '\n')
-        {
-            str_ind++;
-            break;
-        }
-    }
-
-    str[str_ind] = 0;
-    return str_ind;
-}
-
 static void* handle_client(void* args)
 {
     int sockfd = (int)args;
-    char line[SCPI_INPUT_BUFFER_LENGTH];
+    char tcp_buff[16];
     scpi_error_t scpi_error_queue_data[SCPI_ERROR_QUEUE_SIZE];
     char scpi_input_buffer[SCPI_INPUT_BUFFER_LENGTH];
     user_data_t user_data;
@@ -100,7 +73,7 @@ static void* handle_client(void* args)
 
     while(1)
     {
-        int n = readline_tcp(sockfd, line, 128);
+        int n = recv(sockfd, tcp_buff, sizeof(tcp_buff), 0);
 
         if (n == 0)
         {
@@ -112,8 +85,7 @@ static void* handle_client(void* args)
             printf("Thread %d, connection error (%d)\n", sockfd, n);
             break;
         }
-        printf("Thread %d, received: %s", sockfd, line);
-        SCPI_Input(&scpi_context, line, n);
+        SCPI_Input(&scpi_context, tcp_buff, n);
     }
 
     close(sockfd);

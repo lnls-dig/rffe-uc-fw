@@ -31,8 +31,8 @@
 
 #include "scpi/scpi.h"
 
-#define SCPI_INPUT_BUFFER_LENGTH 128
-#define SCPI_ERROR_QUEUE_SIZE 17
+#define SCPI_INPUT_BUFFER_LENGTH 64
+#define SCPI_ERROR_QUEUE_SIZE 8
 #define SCPI_IDN1 "LNLS"
 #define SCPI_IDN2 "RFFEV4"
 #define SCPI_IDN3 NULL

@@ -186,6 +186,7 @@ int board_app_initialize(uintptr_t arg)
   struct spi_dev_s *ssp1, *spi_att;
   struct dac_dev_s *dac;
 
+  lpc17_40_configgpio(WP_FERAM);
   lpc17_40_configgpio(CS_ADT7320_AC);
   lpc17_40_configgpio(CS_ADT7320_BD);
   lpc17_40_configgpio(CS_DAC7554);

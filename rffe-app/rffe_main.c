@@ -37,6 +37,7 @@
 #include "cdce906.h"
 #include "netconfig.h"
 #include "scpi_server.h"
+#include "config_file_migrate.h"
 
 /*
  * Main function
@@ -50,6 +51,11 @@ int rffe_main(int argc, char *argv[])
 {
     int ret;
     struct netifconfig conf;
+
+    /*
+     * Migrate the FeRAM contents to the last format if necessary
+     */
+    config_migrate_latest("/dev/feram0");
 
     /*
      * Initialize the ethernet PHY PLL (50MHz)

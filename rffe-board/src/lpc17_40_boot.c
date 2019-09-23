@@ -42,6 +42,7 @@
 #include <debug.h>
 
 #include <nuttx/board.h>
+#include <nuttx/arch.h>
 #include <arch/board/board.h>
 
 #include "up_arch.h"
@@ -80,3 +81,16 @@ void lpc17_40_boardinitialize(void)
 #endif
 }
 
+/************************************************************************************
+ * Name: board_reset
+ *
+ * Description:
+ *   Resets the microcontroller.
+ *
+ ************************************************************************************/
+
+int board_reset(int arg)
+{
+  up_systemreset();
+  return 0;
+}

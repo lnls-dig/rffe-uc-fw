@@ -117,7 +117,7 @@ int config_get_eth_addressing(const char* path, eth_addr_mode_t* addr_mode)
 
 int config_set_eth_addressing(const char* path, eth_addr_mode_t addr_mode)
 {
-    int fd = open(path, O_RDONLY);
+    int fd = open(path, O_RDWR);
     int ret;
     uint8_t buf;
 

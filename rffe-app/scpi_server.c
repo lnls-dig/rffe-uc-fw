@@ -166,7 +166,7 @@ int scpi_server_start(void)
         {
             pthread_attr_t attr;
             pthread_attr_init(&attr);
-            pthread_attr_setstacksize(&attr, 1024);
+            pthread_attr_setstacksize(&attr, 1280);
             printf("New connection!\n");
             pthread_create(&thread, &attr, &handle_client, (void*)newsockfd);
             pthread_detach(thread);

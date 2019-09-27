@@ -34,6 +34,12 @@ typedef enum
     ETH_ADDR_MODE_NONE,
 } eth_addr_mode_t;
 
+typedef enum
+{
+    TEMP_CTRL_MANUAL,
+    TEMP_CTRL_AUTOMATIC,
+} temp_ctrl_mode_t;
+
 /**
  * @brief Read the config file version
  * @param version : A pointer to store the version read
@@ -202,5 +208,18 @@ int config_get_setpoint_bd(const char* path, float* setpoint);
  */
 int config_set_setpoint_bd(const char* path, float setpoint);
 
+/**
+ * @brief Read the temperature control mode from the config file
+ * @param mode: Temperature control mode (pointer)
+ * @return 0 if success, a negative number otherwise
+ */
+int config_get_temp_control_mode(const char* path, temp_ctrl_mode_t* mode);
+
+/**
+ * @brief Write the temperature controle mode to the config file
+ * @param mode: Temperature control mode
+ * @return 0 if success, a negative number otherwise
+ */
+int config_set_temp_control_mode(const char* path, temp_ctrl_mode_t mode);
 
 #endif

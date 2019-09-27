@@ -57,7 +57,8 @@ struct __attribute__((__packed__)) config_v1
     b16_t attenuation;
     uint8_t __unused5[12];
     uint8_t eth_addr_mode;
-    uint8_t __unused6[15];
+    uint8_t temp_control_manual;
+    uint8_t __unused6[14];
     float pid_ac_kc;
     float pid_ac_ti;
     float pid_ac_td;
@@ -103,6 +104,7 @@ int config_migrate_latest(const char* path)
         confv1.pid_bd_td = 1.0;
         confv1.pid_ac_set_point = 50.0;
         confv1.pid_bd_set_point = 50.0;
+        confv1.temp_control_manual = 0;
 
         confv1.version = 1;
         lseek(fd, 0, SEEK_SET);
@@ -139,6 +141,7 @@ int config_migrate_latest(const char* path)
         confv1.pid_bd_td = 1.0;
         confv1.pid_ac_set_point = 50.0;
         confv1.pid_bd_set_point = 50.0;
+        confv1.temp_control_manual = 0;
 
         confv1.version = 1;
         lseek(fd, 0, SEEK_SET);

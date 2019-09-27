@@ -38,6 +38,7 @@ static const int mask_addr_offset = 0x20;
 static const int gateway_addr_offset = 0x30;
 static const int attenuation_offset = 0x40;
 static const int eth_addr_offset = 0x50;
+static const int temp_ctrl_mode_offset = 0x51;
 static const int pid_ac_kc_offset = 0x60;
 static const int pid_ac_ti_offset = 0x64;
 static const int pid_ac_td_offset = 0x68;
@@ -496,6 +497,55 @@ int config_set_setpoint_bd(const char* path, float setpoint)
 
     lseek(fd, pid_bd_set_point_offset, SEEK_SET);
     ret += write(fd, &setpoint, 4);
+
+    if (ret > 0) ret = 0;
+
+    close(fd);
+    return ret;
+}
+
+int config_get_temp_control_mode(const char* path, temp_ctrl_mode_t* mode)
+{
+    int fd = open(path, O_RDONLY);
+    int ret;
+    char buf;
+
+    if (fd < 0)
+    {
+        return fd;
+    }
+
+    lseek(fd, temp_ctrl_mode_offset, SEEK_SET);
+    ret += read(fd, &buf, 1);
+
+    if (buf)
+    {
+        *mode = TEMP_CTRL_MANUAL;
+    }
+    else
+    {
+        *mode = TEMP_CTRL_AUTOMATIC;
+    }
+
+    if (ret > 0) ret = 0;
+
+    close(fd);
+    return ret;
+}
+
+int config_set_temp_control_mode(const char* path, temp_ctrl_mode_t mode)
+{
+    int fd = open(path, O_RDWR);
+    int ret;
+    char buf = (mode == TEMP_CTRL_MANUAL);
+
+    if (fd < 0)
+    {
+        return fd;
+    }
+
+    lseek(fd, temp_ctrl_mode_offset, SEEK_SET);
+    ret += write(fd, &buf, 1);
 
     if (ret > 0) ret = 0;
 

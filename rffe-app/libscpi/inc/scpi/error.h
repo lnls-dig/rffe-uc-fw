@@ -123,7 +123,7 @@ extern "C" {
     XE(SCPI_ERROR_DATA_QUESTIONABLE,            -231, "Data questionable")                            \
     XE(SCPI_ERROR_INVAL_VERSION,                -233, "Invalid version")                              \
     XE(SCPI_ERROR_HARDWARE_ERROR,               -240, "Hardware error")                               \
-    XE(SCPI_ERROR_HARDWARE_MISSING,             -241, "Hardware missing")                             \
+    X(SCPI_ERROR_HARDWARE_MISSING,              -241, "Hardware missing")                             \
     XE(SCPI_ERROR_MASS_STORAGE_ERROR,           -250, "Mass storage error")                           \
     XE(SCPI_ERROR_MISSING_MASS_STORAGE,         -251, "Missing mass storage")                         \
     XE(SCPI_ERROR_MISSING_MASS_MEDIA,           -252, "Missing media")                                \

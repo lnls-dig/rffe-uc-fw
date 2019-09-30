@@ -27,9 +27,40 @@
 #include "scpi/scpi.h"
 #include "scpi-def.h"
 
-scpi_result_t rffe_measure_temp_ac(scpi_t * context);
-scpi_result_t rffe_measure_temp_bd(scpi_t * context);
-scpi_result_t rffe_set_attenuation(scpi_t * context);
-scpi_result_t rffe_self_test(scpi_t * context);
-
+scpi_result_t rffe_measure_temp_ac(scpi_t* context);
+scpi_result_t rffe_measure_temp_bd(scpi_t* context);
+scpi_result_t rffe_set_attenuation(scpi_t* context);
+scpi_result_t rffe_get_attenuation(scpi_t* context);
+scpi_result_t rffe_self_test(scpi_t* context);
+scpi_result_t rffe_set_temp_ac(scpi_t* context);
+scpi_result_t rffe_set_temp_bd(scpi_t* context);
+scpi_result_t rffe_get_temp_ac(scpi_t* context);
+scpi_result_t rffe_get_temp_bd(scpi_t* context);
+scpi_result_t rffe_set_pid_kc_ac(scpi_t* context);
+scpi_result_t rffe_set_pid_ti_ac(scpi_t* context);
+scpi_result_t rffe_set_pid_td_ac(scpi_t* context);
+scpi_result_t rffe_set_pid_kc_bd(scpi_t* context);
+scpi_result_t rffe_set_pid_ti_bd(scpi_t* context);
+scpi_result_t rffe_set_pid_td_bd(scpi_t* context);
+scpi_result_t rffe_get_pid_kc_ac(scpi_t* context);
+scpi_result_t rffe_get_pid_ti_ac(scpi_t* context);
+scpi_result_t rffe_get_pid_td_ac(scpi_t* context);
+scpi_result_t rffe_get_pid_kc_bd(scpi_t* context);
+scpi_result_t rffe_get_pid_ti_bd(scpi_t* context);
+scpi_result_t rffe_get_pid_td_bd(scpi_t* context);
+scpi_result_t rffe_set_temp_control(scpi_t* context);
+scpi_result_t rffe_get_temp_control(scpi_t* context);
+scpi_result_t rffe_set_dac_output_ac(scpi_t* context);
+scpi_result_t rffe_set_dac_output_bd(scpi_t* context);
+scpi_result_t rffe_get_dac_output_ac(scpi_t* context);
+scpi_result_t rffe_get_dac_output_bd(scpi_t* context);
+scpi_result_t rffe_set_ip_addr(scpi_t* context);
+scpi_result_t rffe_get_ip_addr(scpi_t* context);
+scpi_result_t rffe_set_gateway_addr(scpi_t* context);
+scpi_result_t rffe_get_gateway_addr(scpi_t* context);
+scpi_result_t rffe_set_netmask(scpi_t* context);
+scpi_result_t rffe_get_netmask(scpi_t* context);
+scpi_result_t rffe_set_dhcp_mode(scpi_t* context);
+scpi_result_t rffe_get_dhcp_mode(scpi_t* context);
+scpi_result_t rffe_reset(scpi_t* context);
 #endif

@@ -30,6 +30,9 @@
 typedef struct
 {
     int sockfd;
+    int* active_threads;
+    float* dac_ac;
+    float* dac_bd;
 } user_data_t;
 
 size_t SCPI_Write(scpi_t * context, const char * data, size_t len);

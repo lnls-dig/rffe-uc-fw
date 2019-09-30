@@ -44,28 +44,17 @@
 #include "scpi_rffe_cmd.h"
 #include "scpi_tables.h"
 
-struct client_context
-{
-    int sockfd;
-    int* active_threads;
-};
-
 static void* handle_client(void* args)
 {
-    struct client_context* context = (struct client_context*)args;
+    user_data_t* context = (user_data_t*)args;
     int sockfd = context->sockfd;
     int* active_threads = context->active_threads;
     char tcp_buff[16];
     scpi_error_t scpi_error_queue_data[SCPI_ERROR_QUEUE_SIZE];
     char scpi_input_buffer[SCPI_INPUT_BUFFER_LENGTH];
-    user_data_t user_data;
     scpi_t scpi_context;
     pthread_mutex_t counter_lock;
 
-    /*
-     * Not necessary anymore
-     */
-    free(context);
 
     pthread_mutex_lock(&counter_lock);
     (*active_threads)++;
@@ -80,8 +69,7 @@ static void* handle_client(void* args)
               scpi_input_buffer, SCPI_INPUT_BUFFER_LENGTH,
               scpi_error_queue_data, SCPI_ERROR_QUEUE_SIZE);
 
-    user_data.sockfd = sockfd;
-    scpi_context.user_context = &user_data;
+    scpi_context.user_context = context;
 
     while(1)
     {
@@ -102,6 +90,11 @@ static void* handle_client(void* args)
 
     close(sockfd);
 
+    /*
+     * Free client context
+     */
+    free(context);
+
     pthread_mutex_lock(&counter_lock);
     (*active_threads)--;
     pthread_mutex_unlock(&counter_lock);
@@ -115,6 +108,8 @@ int scpi_server_start(void)
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     pthread_t thread;
+    volatile float dac_ac = 0;
+    volatile float dac_bd = 0;
 
     /*
      * Open a socket
@@ -177,9 +172,11 @@ int scpi_server_start(void)
 
         if (active_threads < 4)
         {
-            struct client_context* ccontext = malloc(sizeof(struct client_context));
+            user_data_t* ccontext = malloc(sizeof(user_data_t));
             ccontext->active_threads = &active_threads;
             ccontext->sockfd = newsockfd;
+            ccontext->dac_ac = (float*)&dac_ac;
+            ccontext->dac_bd = (float*)&dac_bd;
 
             pthread_attr_t attr;
             pthread_attr_init(&attr);

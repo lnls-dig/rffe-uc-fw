@@ -33,6 +33,7 @@
 #include <pthread.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 
@@ -43,11 +44,17 @@
 #include "scpi_rffe_cmd.h"
 #include "scpi_tables.h"
 
-static volatile int active_threads = 0;
+struct client_context
+{
+    int sockfd;
+    int* active_threads;
+};
 
 static void* handle_client(void* args)
 {
-    int sockfd = (int)args;
+    struct client_context* context = (struct client_context*)args;
+    int sockfd = context->sockfd;
+    int* active_threads = context->active_threads;
     char tcp_buff[16];
     scpi_error_t scpi_error_queue_data[SCPI_ERROR_QUEUE_SIZE];
     char scpi_input_buffer[SCPI_INPUT_BUFFER_LENGTH];
@@ -55,8 +62,13 @@ static void* handle_client(void* args)
     scpi_t scpi_context;
     pthread_mutex_t counter_lock;
 
+    /*
+     * Not necessary anymore
+     */
+    free(context);
+
     pthread_mutex_lock(&counter_lock);
-    active_threads++;
+    (*active_threads)++;
     pthread_mutex_unlock(&counter_lock);
 
     /* user_context will be pointer to socket */
@@ -91,7 +103,7 @@ static void* handle_client(void* args)
     close(sockfd);
 
     pthread_mutex_lock(&counter_lock);
-    active_threads--;
+    (*active_threads)--;
     pthread_mutex_unlock(&counter_lock);
     return NULL;
 }
@@ -99,6 +111,7 @@ static void* handle_client(void* args)
 int scpi_server_start(void)
 {
     int sockfd, newsockfd;
+    int active_threads = 0;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     pthread_t thread;
@@ -164,11 +177,15 @@ int scpi_server_start(void)
 
         if (active_threads < 4)
         {
+            struct client_context* ccontext = malloc(sizeof(struct client_context));
+            ccontext->active_threads = &active_threads;
+            ccontext->sockfd = newsockfd;
+
             pthread_attr_t attr;
             pthread_attr_init(&attr);
             pthread_attr_setstacksize(&attr, 1280);
             printf("New connection!\n");
-            pthread_create(&thread, &attr, &handle_client, (void*)newsockfd);
+            pthread_create(&thread, &attr, &handle_client, ccontext);
             pthread_detach(thread);
         }
         else

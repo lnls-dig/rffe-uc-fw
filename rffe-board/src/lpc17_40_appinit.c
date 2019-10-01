@@ -48,6 +48,7 @@
 #include <nuttx/spi/spi_bitbang.h>
 #include <nuttx/analog/dac.h>
 #include <nuttx/sensors/adt7320.h>
+#include <nuttx/sensors/lm71.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/eeprom/i2c_xx24xx.h>
 #include <nuttx/rf/dat-31r5-sp.h>
@@ -181,6 +182,7 @@ uint8_t lpc17_40_ssp1status(FAR struct spi_dev_s *dev, uint32_t devid)
 int board_app_initialize(uintptr_t arg)
 {
   int ret;
+  uint8_t buf[2];
 
   struct i2c_master_s *i2c0, *i2c1;
   struct spi_dev_s *ssp1, *spi_att;
@@ -225,8 +227,36 @@ int board_app_initialize(uintptr_t arg)
 
   ssp1 = lpc17_40_sspbus_initialize(1);
 
-  adt7320_register("/dev/temp_ac", ssp1, SPIDEV_TEMPERATURE(0));
-  adt7320_register("/dev/temp_bd", ssp1, SPIDEV_TEMPERATURE(1));
+  /*
+   * Checks if LM71 is present
+   */
+  SPI_LOCK(ssp1, true);
+  SPI_SETMODE(ssp1, SPIDEV_MODE0);
+  SPI_SETBITS(ssp1, 8);
+  SPI_HWFEATURES(ssp1, 0);
+  SPI_SETFREQUENCY(ssp1, 1000000);
+  SPI_SELECT(ssp1, SPIDEV_TEMPERATURE(0), true);
+  SPI_RECVBLOCK(ssp1, buf, 2);
+  SPI_SEND(ssp1, 0xFF);
+  SPI_SEND(ssp1, 0xFF);
+  SPI_RECVBLOCK(ssp1, buf, 2);
+  SPI_SELECT(ssp1, SPIDEV_TEMPERATURE(0), false);
+  SPI_LOCK(ssp1, false);
+
+  /*
+   * If the ID matches, register the LM71 driver. Otherwise register
+   * the ADT7320 driver.
+   */
+  if (buf[0] == 0x80 && buf[1] == 0x0F)
+  {
+    lm71_register("/dev/temp_ac", ssp1, SPIDEV_TEMPERATURE(0));
+    lm71_register("/dev/temp_bd", ssp1, SPIDEV_TEMPERATURE(1));
+  }
+  else
+  {
+    adt7320_register("/dev/temp_ac", ssp1, SPIDEV_TEMPERATURE(0));
+    adt7320_register("/dev/temp_bd", ssp1, SPIDEV_TEMPERATURE(1));
+  }
 
   dac = dac7554_initialize(ssp1, SPIDEV_USER(0));
   dac_register("/dev/dac0", dac);

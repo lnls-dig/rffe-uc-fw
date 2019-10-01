@@ -557,7 +557,7 @@ scpi_result_t rffe_set_gateway_addr(scpi_t* context)
         int valid_ip = inet_pton(AF_INET, buf, &gateway);
         if (valid_ip)
         {
-            config_set_ipv4_addr(cfg_file, gateway);
+            config_set_gateway_addr(cfg_file, gateway);
         }
     }
     else
@@ -592,7 +592,7 @@ scpi_result_t rffe_set_netmask(scpi_t* context)
         int valid_ip = inet_pton(AF_INET, buf, &netmask);
         if (valid_ip)
         {
-            config_set_ipv4_addr(cfg_file, netmask);
+            config_set_mask_addr(cfg_file, netmask);
         }
     }
     else

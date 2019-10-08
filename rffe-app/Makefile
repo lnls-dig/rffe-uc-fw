@@ -48,7 +48,7 @@ STACKSIZE = $(CONFIG_EXAMPLES_RFFE_STACKSIZE)
 # Rffe, World! Example
 
 ASRCS =
-CSRCS = cdce906.c netconfig.c scpi_server.c scpi_tables.c scpi_rffe_cmd.c scpi_interface.c config_file.c config_file_migrate.c rffe_console_cfg.c\
+CSRCS = cdce906.c netconfig.c scpi_server.c scpi_tables.c scpi_rffe_cmd.c scpi_interface.c config_file.c config_file_migrate.c rffe_console_cfg.c fw_update.c\
 	$(addprefix ./libscpi/src/, \
 	error.c fifo.c ieee488.c \
 	minimal.c parser.c units.c utils.c \

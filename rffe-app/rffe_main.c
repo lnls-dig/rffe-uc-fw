@@ -114,6 +114,11 @@ int rffe_main(int argc, char *argv[])
     print_netconfig(&conf);
 
     /*
+     * Firmware update server
+     */
+    start_fw_update_server();
+
+    /*
      * Initialize the RFFE scpi server
      */
     scpi_server_start();

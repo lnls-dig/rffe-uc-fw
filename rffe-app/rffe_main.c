@@ -39,6 +39,8 @@
 #include "scpi_server.h"
 #include "config_file_migrate.h"
 #include "config_file.h"
+#include "rffe_console_cfg.h"
+#include "fw_update.h"
 
 /*
  * Main function
@@ -59,6 +61,16 @@ int rffe_main(int argc, char *argv[])
      * Migrate the FeRAM contents to the last format if necessary
      */
     config_migrate_latest(cfg_file);
+
+    /*
+     * If there are arguments to be read, call rffe_console_cfg. This
+     * is used for reading and writing configuration parameters from
+     * the FeRAM
+     */
+    if (argc > 1)
+    {
+        return rffe_console_cfg(argc, argv);
+    }
 
     /*
      * Initialize the ethernet PHY PLL (50MHz)

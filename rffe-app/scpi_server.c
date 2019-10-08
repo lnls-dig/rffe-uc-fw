@@ -105,6 +105,7 @@ int scpi_server_start(void)
 {
     int sockfd, newsockfd;
     int active_threads = 0;
+    int ret;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     pthread_t thread;
@@ -116,15 +117,31 @@ int scpi_server_start(void)
      */
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
+    if (sockfd < 0)
+    {
+        perror("failed to open a socket");
+        return -1;
+    }
+
     memset(&serv_addr, 0, sizeof(serv_addr));
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(9001);
 
-    bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
+    ret = bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
+    if (ret < 0)
+    {
+        perror("failed to bind a socket");
+        return -1;
+    }
 
-    listen(sockfd, 4);
+    ret = listen(sockfd, 4);
+    if (ret < 0)
+    {
+        perror("failed to listen to a socket");
+        return -1;
+    }
 
     while (1)
     {
@@ -135,7 +152,6 @@ int scpi_server_start(void)
         setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, &value, sizeof(int));
 
         struct timeval tv;
-        int ret;
 
         value = TRUE;
         ret = setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, &value, sizeof(int));

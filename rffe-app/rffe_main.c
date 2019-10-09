@@ -44,6 +44,8 @@
 #include "rffe_console_cfg.h"
 #include "fw_update.h"
 
+static const char* cfg_file = "/dev/feram0";
+
 #if !defined(BUILD_MODULE)
 int rffe_main(int argc, char *argv[]);
 
@@ -57,10 +59,22 @@ int rffe_startup(int argc, char* argv[])
     char* nsh_argv[] = {"nsh", NULL};
     char* rffe_argv[] = {"rffe", NULL};
 
+    /*
+     * This delay is necessary for DHCP to work properly when powering
+     * up the board. I don't known why, but removing it causes DHCP to
+     * hang, and all network activities to stop.
+     */
+    usleep(100000);
+
     nsh_initialize();
 
     nsh_telnetstart(AF_INET);
     task_create("nsh", 100, 2048, nsh_consolemain, nsh_argv);
+
+    /*
+     * Migrate the FeRAM contents to the last format if necessary
+     */
+    config_migrate_latest(cfg_file);
 
     return rffe_main(1, rffe_argv);
 }
@@ -78,13 +92,7 @@ int rffe_main(int argc, char *argv[])
 {
     int ret;
     struct netifconfig conf;
-    const char* cfg_file = "/dev/feram0";
     eth_addr_mode_t dhcp;
-
-    /*
-     * Migrate the FeRAM contents to the last format if necessary
-     */
-    config_migrate_latest(cfg_file);
 
     /*
      * If there are arguments to be read, call rffe_console_cfg. This

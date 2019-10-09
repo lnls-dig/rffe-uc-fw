@@ -128,8 +128,6 @@ int rffe_main(int argc, char *argv[])
         return -1;
     }
 
-    printf("Configuring network...\n");
-
     /*
      * Get the network configuration from the FeRAM
      */
@@ -143,6 +141,8 @@ int rffe_main(int argc, char *argv[])
 
     if (dhcp == ETH_ADDR_MODE_STATIC)
     {
+        printf("Configuring network (static ip)...\n");
+
         /*
          * Configure the network interface, static IP
          */
@@ -150,6 +150,8 @@ int rffe_main(int argc, char *argv[])
     }
     else
     {
+        printf("Configuring network (dhcp)...\n");
+
         /*
          * Configure the network interface, use DHCP
          */

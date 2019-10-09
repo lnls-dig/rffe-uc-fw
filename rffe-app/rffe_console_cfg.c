@@ -77,11 +77,11 @@ int rffe_console_cfg(int argc, char *argv[])
                 eth_addr_mode_t dhcp;
                 config_get_eth_addressing(cfg_file, &dhcp);
 
-                if (dhcp == ETH_ADDR_MODE_STATIC)
+                if (dhcp == ETH_ADDR_MODE_DHCP)
                 {
                     printf("enabled\n");
                 }
-                else if (dhcp == ETH_ADDR_MODE_DHCP)
+                else if (dhcp == ETH_ADDR_MODE_STATIC)
                 {
                     printf("disabled\n");
                 }

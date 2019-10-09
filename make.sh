@@ -29,5 +29,5 @@ elif test "$cmd" = "clean"; then
 	cd ..
 	rm apps/external
 elif test "$cmd" = "flash"; then
-	openocd -f scripts/openocd/lpc17-cmsis.cfg -c "program nuttx/nuttx; reset; shutdown"
+	openocd -f scripts/openocd/lpc17-cmsis.cfg -c "program nuttx/nuttx.bin 0x10000; reset; shutdown"
 fi

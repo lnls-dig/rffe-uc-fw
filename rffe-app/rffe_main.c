@@ -31,6 +31,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sched.h>
+#include <sys/ioctl.h>
+#include <nuttx/rf/ioctl.h>
+#include <nuttx/rf/attenuator.h>
 
 #include "netutils/netlib.h"
 #include "netutils/dhcpc.h"
@@ -93,6 +96,8 @@ int rffe_main(int argc, char *argv[])
     int ret;
     struct netifconfig conf;
     eth_addr_mode_t dhcp;
+    struct attenuator_control att;
+    int attfd;
 
     /*
      * If there are arguments to be read, call rffe_console_cfg. This
@@ -103,6 +108,15 @@ int rffe_main(int argc, char *argv[])
     {
         return rffe_console_cfg(argc, argv);
     }
+
+    /*
+     * Restore previous RF attenuation level
+     */
+    config_get_attenuation(cfg_file, &att.attenuation);
+    printf("RF attenuation level: %.1f dB\n", b16tof(att.attenuation));
+    attfd = open("/dev/att0", O_RDONLY);
+    ioctl(attfd, RFIOC_SETATT, (unsigned long)&att);
+    close(attfd);
 
     /*
      * Initialize the ethernet PHY PLL (50MHz)

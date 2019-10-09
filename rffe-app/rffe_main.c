@@ -30,9 +30,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sched.h>
 
 #include "netutils/netlib.h"
 #include "netutils/dhcpc.h"
+#include "nshlib/nshlib.h"
 
 #include "cdce906.h"
 #include "netconfig.h"
@@ -41,6 +43,28 @@
 #include "config_file.h"
 #include "rffe_console_cfg.h"
 #include "fw_update.h"
+
+#if !defined(BUILD_MODULE)
+int rffe_main(int argc, char *argv[]);
+
+/*
+ * rffe_startup: Initializes the board, start the telnet daemon, the
+ * nsh session and the rffe application. This is called by Nuttx on
+ * startup.
+ */
+int rffe_startup(int argc, char* argv[])
+{
+    char* nsh_argv[] = {"nsh", NULL};
+    char* rffe_argv[] = {"rffe", NULL};
+
+    nsh_initialize();
+
+    nsh_telnetstart(AF_INET);
+    task_create("nsh", 100, 2048, nsh_consolemain, nsh_argv);
+
+    return rffe_main(1, rffe_argv);
+}
+#endif
 
 /*
  * Main function

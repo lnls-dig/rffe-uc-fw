@@ -61,6 +61,7 @@ static uint8_t cdce906_config[] =
     0,    /* Y3 */
     0,    /* Y4 */
     0,    /* Y5 */
+    (3<<4)|0xB,
 };
 
 int cdce906_init(char* devfile)

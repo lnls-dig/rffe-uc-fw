@@ -148,38 +148,19 @@ int scpi_server_start(void)
         clilen = sizeof(cli_addr);
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
-        int value = TRUE;
-        setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, &value, sizeof(int));
-
         struct timeval tv;
 
-        value = TRUE;
-        ret = setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, &value, sizeof(int));
-        if (ret < 0)
-        {
-            fprintf(stderr, "setsockopt(SO_KEEPALIVE) failed: %d\n", ret);
-        }
-
-        tv.tv_sec  = 5;
+        /*
+         * Receive timeout: 30s
+         */
+        tv.tv_sec  = 30;
         tv.tv_usec = 0;
+        ret = setsockopt(newsockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
 
-        ret = setsockopt(newsockfd, SOL_TCP, TCP_KEEPIDLE, &tv, sizeof(struct timeval));
         if (ret < 0)
         {
-            fprintf(stderr, "setsockopt(TCP_KEEPIDLE) failed: %d\n", ret);
+            fprintf(stderr, "setsockopt(SO_RCVTIMEO) failed: %d\n", ret);
         }
-
-        tv.tv_sec  = 1;
-        tv.tv_usec = 0;
-
-        ret = setsockopt(newsockfd, SOL_TCP, TCP_KEEPINTVL, &tv, sizeof(struct timeval));
-        if (ret < 0)
-        {
-            fprintf(stderr, "setsockopt(TCP_KEEPIDLE) failed: %d\n", ret);
-        }
-
-        value = 3;
-        ret = setsockopt(newsockfd, SOL_TCP, TCP_KEEPCNT, &value, sizeof(int));
 
         if (ret < 0)
         {

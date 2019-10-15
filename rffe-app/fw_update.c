@@ -37,6 +37,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <sys/boardctl.h>
+#include <sys/time.h>
 
 static void* fw_update_server(void* args)
 {
@@ -87,18 +88,27 @@ static void* fw_update_server(void* args)
         }
         else continue;
 
+        struct timeval tv;
+
+        /*
+         * Receive timeout: 30s
+         */
+        tv.tv_sec  = 30;
+        tv.tv_usec = 0;
+        ret = setsockopt(newsockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
+
         while (1)
         {
             int n = recv(newsockfd, tcp_buf, 1, MSG_WAITALL);
 
             if (n == 0)
             {
-                printf("Firmware update server: connection closed\n", newsockfd);
+                printf("Firmware update server: connection closed\n");
                 break;
             }
             else if (n < 0)
             {
-                printf("Firmware update server: connection error (%d)\n", newsockfd, n);
+                printf("Firmware update server: connection error (%d)\n", n);
                 break;
             }
 
@@ -148,6 +158,11 @@ static void* fw_update_server(void* args)
                 break;
             }
         }
+
+        /*
+         * Close the socket
+         */
+        close(newsockfd);
     }
     return NULL;
 }

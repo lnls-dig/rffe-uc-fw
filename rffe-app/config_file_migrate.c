@@ -82,9 +82,14 @@ int config_migrate_latest(const char* path)
     }
 
     read(fd, &confv0, sizeof(confv0));
-
     if (confv0.version == 0)
     {
+        /*
+         * Save a backup at the end of FERAM
+         */
+        lseek(fd, 2048 - 256, SEEK_SET);
+        write(fd, &confv0, sizeof(confv0));
+
         memset(&confv1, 0, sizeof(confv1));
         memcpy(confv1.mac, confv0.mac, 6);
         memcpy(confv1.ipv4, confv0.ipv4, 4);

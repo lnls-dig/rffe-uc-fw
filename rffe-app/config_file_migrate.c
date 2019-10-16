@@ -109,7 +109,7 @@ int config_migrate_latest(const char* path)
         confv1.pid_bd_td = 1.0;
         confv1.pid_ac_set_point = 50.0;
         confv1.pid_bd_set_point = 50.0;
-        confv1.temp_control_manual = 0;
+        confv1.temp_control_manual = 1;
 
         confv1.version = 1;
         lseek(fd, 0, SEEK_SET);

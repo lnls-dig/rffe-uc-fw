@@ -165,7 +165,7 @@ int config_set_pid_ac(const char* path, float kc, float ti, float td);
  * @param td: Derivative constant (pointer)
  * @return 0 if success, a negative number otherwise
  */
-int config_get_pid_bd(const char* path, float* kc, float* ti, float* tc);
+int config_get_pid_bd(const char* path, float* kc, float* ti, float* td);
 
 /**
  * @brief Write PID constants for the BD channel to the config file

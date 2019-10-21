@@ -46,6 +46,7 @@
 #include "config_file.h"
 #include "rffe_console_cfg.h"
 #include "fw_update.h"
+#include "temp_control.h"
 
 static const char* cfg_file = "/dev/feram0";
 
@@ -98,6 +99,8 @@ int rffe_main(int argc, char *argv[])
     eth_addr_mode_t dhcp;
     struct attenuator_control att;
     int attfd;
+    float dac_ac = 0.0;
+    float dac_bd = 0.0;
 
     /*
      * If there are arguments to be read, call rffe_console_cfg. This
@@ -162,6 +165,11 @@ int rffe_main(int argc, char *argv[])
     print_netconfig(&conf);
 
     /*
+     * Temperature control server
+     */
+    start_temp_control_server(&dac_ac, &dac_bd);
+
+    /*
      * Firmware update server
      */
     start_fw_update_server();
@@ -169,7 +177,7 @@ int rffe_main(int argc, char *argv[])
     /*
      * Initialize the RFFE scpi server
      */
-    scpi_server_start();
+    scpi_server_start(&dac_ac, &dac_bd);
 
     return 0;
 }

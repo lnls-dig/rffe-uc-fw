@@ -1,8 +1,9 @@
 /****************************************************************************
- * rffe-app/scpi_server.h
+ * rffe-app/temp_control.h
  *
  *   Copyright (C) 2019 Augusto Fraga Giachero. All rights reserved.
  *   Author: Augusto Fraga Giachero <afg@augustofg.net>
+ *   Inspired by Arduino PID Library by Brett Beauregard
  *
  * This file is part of the RFFE firmware.
  *
@@ -21,9 +22,9 @@
  *
  ****************************************************************************/
 
-#ifndef SCPI_SERVER_H_
-#define SCPI_SERVER_H_
+#ifndef TEMP_CONTROL_H_
+#define TEMP_CONTROL_H_
 
-int scpi_server_start(float* dac_ac, float* dac_bd);
+void start_temp_control_server(float* dac_ac, float* dac_bd);
 
 #endif

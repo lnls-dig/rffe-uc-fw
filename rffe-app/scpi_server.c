@@ -101,7 +101,7 @@ static void* handle_client(void* args)
     return NULL;
 }
 
-int scpi_server_start(void)
+int scpi_server_start(float* dac_ac, float* dac_bd)
 {
     int sockfd, newsockfd;
     int active_threads = 0;
@@ -109,8 +109,6 @@ int scpi_server_start(void)
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     pthread_t thread;
-    volatile float dac_ac = 0;
-    volatile float dac_bd = 0;
 
     /*
      * Open a socket
@@ -172,8 +170,8 @@ int scpi_server_start(void)
             user_data_t* ccontext = malloc(sizeof(user_data_t));
             ccontext->active_threads = &active_threads;
             ccontext->sockfd = newsockfd;
-            ccontext->dac_ac = (float*)&dac_ac;
-            ccontext->dac_bd = (float*)&dac_bd;
+            ccontext->dac_ac = dac_ac;
+            ccontext->dac_bd = dac_bd;
 
             pthread_attr_t attr;
             pthread_attr_init(&attr);

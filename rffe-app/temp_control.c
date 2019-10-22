@@ -48,7 +48,7 @@ static void* temp_control_server(void* args)
 {
     pid_ctrl_t pid_ac, pid_bd;
     float out_ac, out_bd, temp_ac, temp_bd;
-    int temp_ac_fd, temp_bd_fd, dac_fd, ret;
+    int temp_ac_fd, temp_bd_fd, dac_fd;
     b16_t temp;
     uint8_t buf[3];
     uint16_t dac_val;
@@ -83,7 +83,7 @@ static void* temp_control_server(void* args)
 
     while(1)
     {
-        ret = config_get_temp_control_mode(cfg_file, &tctrl);
+        config_get_temp_control_mode(cfg_file, &tctrl);
 
         if (tctrl == TEMP_CTRL_AUTOMATIC)
         {

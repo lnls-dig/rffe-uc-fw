@@ -37,8 +37,14 @@
 
 #include "netconfig.h"
 #include "config_file.h"
+#include "git_version.h"
 
 static char* cfg_file = "/dev/feram0";
+
+void rffe_console_print_version(void)
+{
+    printf("---Version---\nrelease: %s\nrffe: %s\napps: %s\nnuttx: %s\n", RFFE_GIT_TAG, RFFE_GIT_HASH, APPS_GIT_HASH, NUTTX_GIT_HASH);
+}
 
 int rffe_console_cfg(int argc, char *argv[])
 {
@@ -126,6 +132,10 @@ int rffe_console_cfg(int argc, char *argv[])
                 b16_t att;
                 config_get_attenuation("/dev/feram0", &att);
                 printf("%f dB\n", b16tof(att));
+            }
+            else if (strcmp(argv[2], "version") == 0)
+            {
+                rffe_console_print_version();
             }
 
         }

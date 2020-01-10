@@ -30,13 +30,14 @@
 #define __SCPI_DEF_H_
 
 #include "scpi/scpi.h"
+#include "git_version.h"
 
 #define SCPI_INPUT_BUFFER_LENGTH 64
 #define SCPI_ERROR_QUEUE_SIZE 8
-#define SCPI_IDN1 "LNLS"
-#define SCPI_IDN2 "RFFEV4"
+#define SCPI_IDN1 "CNPEM LNLS"
+#define SCPI_IDN2 "RFFE"
 #define SCPI_IDN3 NULL
-#define SCPI_IDN4 "01-02"
+#define SCPI_IDN4 RFFE_GIT_TAG
 
 size_t SCPI_Write(scpi_t * context, const char * data, size_t len);
 int SCPI_Error(scpi_t * context, int_fast16_t err);

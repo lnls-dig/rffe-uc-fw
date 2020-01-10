@@ -25,5 +25,6 @@
 #define RFFE_CONSOLE_CFG_H_
 
 int rffe_console_cfg(int argc, char *argv[]);
+void rffe_console_print_version(void);
 
 #endif

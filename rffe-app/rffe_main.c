@@ -113,6 +113,11 @@ int rffe_main(int argc, char *argv[])
     }
 
     /*
+     * Print git hashs for apps/ nuttx/ and the main repo
+     */
+    rffe_console_print_version();
+
+    /*
      * Restore previous RF attenuation level
      */
     config_get_attenuation(cfg_file, &att.attenuation);

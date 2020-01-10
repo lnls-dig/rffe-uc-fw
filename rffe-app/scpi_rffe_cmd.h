@@ -62,5 +62,6 @@ scpi_result_t rffe_set_netmask(scpi_t* context);
 scpi_result_t rffe_get_netmask(scpi_t* context);
 scpi_result_t rffe_set_dhcp_mode(scpi_t* context);
 scpi_result_t rffe_get_dhcp_mode(scpi_t* context);
+scpi_result_t rffe_get_version(scpi_t* context);
 scpi_result_t rffe_reset(scpi_t* context);
 #endif

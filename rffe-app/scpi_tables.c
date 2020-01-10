@@ -88,6 +88,7 @@ const scpi_command_t scpi_commands[] =
     {.pattern = "GET:NETMask?", .callback = rffe_get_netmask,},
     {.pattern = "SET:DHCPMode", .callback = rffe_set_dhcp_mode,},
     {.pattern = "GET:DHCPMode?", .callback = rffe_get_dhcp_mode,},
+    {.pattern = "GET:VERsion?", .callback = rffe_get_version,},
     {.pattern = "SYSTem:RESet", .callback = rffe_reset,},
 
     SCPI_CMD_LIST_END

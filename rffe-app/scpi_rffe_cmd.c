@@ -36,6 +36,7 @@
 #include "scpi_rffe_cmd.h"
 #include "scpi_interface.h"
 #include "config_file.h"
+#include "git_version.h"
 
 static const char* cfg_file = "/dev/feram0";
 static const char* dac_file = "/dev/dac0";
@@ -653,6 +654,15 @@ scpi_result_t rffe_get_dhcp_mode(scpi_t* context)
         SCPI_ResultInt32(context, 1);
     }
 
+    return SCPI_RES_OK;
+}
+
+scpi_result_t rffe_get_version(scpi_t* context)
+{
+    SCPI_ResultCharacters(context, APPS_GIT_HASH, strlen(APPS_GIT_HASH));
+    SCPI_ResultCharacters(context, NUTTX_GIT_HASH, strlen(NUTTX_GIT_HASH));
+    SCPI_ResultCharacters(context, RFFE_GIT_HASH, strlen(RFFE_GIT_HASH));
+    SCPI_ResultCharacters(context, RFFE_GIT_TAG, strlen(RFFE_GIT_TAG));
     return SCPI_RES_OK;
 }
 

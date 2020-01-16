@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <nuttx/leds/userled.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,6 +56,9 @@ static void* handle_client(void* args)
     scpi_t scpi_context;
     pthread_mutex_t counter_lock;
 
+    int ledfd = open("/dev/statusleds", O_WRONLY);
+    ioctl(ledfd, ULEDIOC_SETALL, 0x02);
+    close(ledfd);
 
     pthread_mutex_lock(&counter_lock);
     (*active_threads)++;
@@ -97,6 +101,12 @@ static void* handle_client(void* args)
 
     pthread_mutex_lock(&counter_lock);
     (*active_threads)--;
+    if (*active_threads < 1)
+    {
+        int ledfd = open("/dev/statusleds", O_WRONLY);
+        ioctl(ledfd, ULEDIOC_SETALL, 0x00);
+        close(ledfd);
+    }
     pthread_mutex_unlock(&counter_lock);
     return NULL;
 }

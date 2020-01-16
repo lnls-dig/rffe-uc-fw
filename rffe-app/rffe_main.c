@@ -34,6 +34,7 @@
 #include <sys/ioctl.h>
 #include <nuttx/rf/ioctl.h>
 #include <nuttx/rf/attenuator.h>
+#include <nuttx/leds/userled.h>
 
 #include "netutils/netlib.h"
 #include "netutils/dhcpc.h"
@@ -71,6 +72,10 @@ int rffe_startup(int argc, char* argv[])
     usleep(100000);
 
     nsh_initialize();
+
+    int ledfd = open("/dev/statusleds", O_WRONLY);
+    ioctl(ledfd, ULEDIOC_SETALL, 0x01);
+    close(ledfd);
 
     nsh_telnetstart(AF_INET);
     task_create("nsh", 100, 2048, nsh_consolemain, nsh_argv);
@@ -166,8 +171,11 @@ int rffe_main(int argc, char *argv[])
         netconfig("eth0", &conf, 1);
     }
 
-
     print_netconfig(&conf);
+
+    int ledfd = open("/dev/statusleds", O_WRONLY);
+    ioctl(ledfd, ULEDIOC_SETALL, 0x00);
+    close(ledfd);
 
     /*
      * Temperature control server

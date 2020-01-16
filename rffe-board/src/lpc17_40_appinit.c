@@ -52,6 +52,7 @@
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/eeprom/i2c_xx24xx.h>
 #include <nuttx/rf/dat-31r5-sp.h>
+#include <nuttx/leds/userled.h>
 
 #include "lpc17_40_gpio.h"
 #include "lpc17_40_ssp.h"
@@ -267,6 +268,13 @@ int board_app_initialize(uintptr_t arg)
                      spi_att,
                      SPIDEV_USER(1));
 
+  /* Register the LED driver */
+
+  ret = userled_lower_initialize("/dev/statusleds");
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: userled_lower_initialize() failed: %d\n", ret);
+    }
   UNUSED(ret);
   return OK;
 }

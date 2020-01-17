@@ -124,7 +124,7 @@ class RFFEControllerBoard:
         """Method used to turn on/off the temperature controller. For turning the controller on, the
         argument should be the integer 1. To turn the controller off, the argument should be 0."""
         if (status in (0, 1)):
-            self.__scpi_request__("SET:TEMPControl:AUTOmatic {}".format(value))
+            self.__scpi_request__("SET:TEMPControl:AUTOmatic {}".format(status))
 
     def get_heater_ac_value(self):
         """This method returns the voltage signal to the heater in the A/C front-end as a

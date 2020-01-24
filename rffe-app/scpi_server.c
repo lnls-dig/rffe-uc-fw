@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <sys/ioctl.h>
 #include <nuttx/leds/userled.h>
 
 #include <stdio.h>
@@ -103,7 +104,7 @@ static void* handle_client(void* args)
     (*active_threads)--;
     if (*active_threads < 1)
     {
-        int ledfd = open("/dev/statusleds", O_WRONLY);
+        ledfd = open("/dev/statusleds", O_WRONLY);
         ioctl(ledfd, ULEDIOC_SETALL, 0x00);
         close(ledfd);
     }

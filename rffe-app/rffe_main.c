@@ -104,6 +104,12 @@ int rffe_main(int argc, char *argv[])
     eth_addr_mode_t dhcp;
     struct attenuator_control att;
     int attfd;
+
+    /*
+     * dac_ac and dac_bd are shared between the temperature control
+     * server and scpi server to allow tracking of the actual DAC
+     * output value (the DAC is write-only)
+     */
     float dac_ac = 0.0;
     float dac_bd = 0.0;
 

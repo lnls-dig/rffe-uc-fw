@@ -411,8 +411,6 @@ scpi_result_t rffe_get_temp_control(scpi_t* context)
 scpi_result_t rffe_set_dac_output_ac(scpi_t* context)
 {
     user_data_t* user_context = (user_data_t*)context->user_context;
-    uint16_t dac_val;
-    uint8_t buf[3];
     scpi_number_t par;
     scpi_result_t ret = SCPI_RES_OK;
 
@@ -427,19 +425,15 @@ scpi_result_t rffe_set_dac_output_ac(scpi_t* context)
     {
         if (SCPI_ParamNumber(context, scpi_special_numbers_def, &par, TRUE))
         {
-            *(user_context->dac_ac) = par.content.value;
-            dac_val = (par.content.value / 3.3) * 4095.0;
-
-            if (dac_val > 4095)
+            if (par.content.value > 3.3)
             {
                 SCPI_ErrorPush(context, SCPI_ERROR_ILLEGAL_PARAMETER_VALUE);
                 ret = SCPI_RES_ERR;
             }
-
-            buf[0] = 3;
-            buf[1] = dac_val & 0xFF;
-            buf[2] = (dac_val >> 8) & 0xFF;
-            write(fd, buf, 3);
+            else
+            {
+                *(user_context->dac_ac) = par.content.value;
+            }
         }
         else
         {
@@ -454,8 +448,6 @@ scpi_result_t rffe_set_dac_output_ac(scpi_t* context)
 scpi_result_t rffe_set_dac_output_bd(scpi_t* context)
 {
     user_data_t* user_context = (user_data_t*)context->user_context;
-    uint16_t dac_val;
-    uint8_t buf[3];
     scpi_number_t par;
     scpi_result_t ret = SCPI_RES_OK;
 
@@ -470,19 +462,15 @@ scpi_result_t rffe_set_dac_output_bd(scpi_t* context)
     {
         if (SCPI_ParamNumber(context, scpi_special_numbers_def, &par, TRUE))
         {
-            *(user_context->dac_bd) = par.content.value;
-            dac_val = (par.content.value / 3.3) * 4095.0;
-
-            if (dac_val > 4095)
+            if (par.content.value > 3.3)
             {
                 SCPI_ErrorPush(context, SCPI_ERROR_ILLEGAL_PARAMETER_VALUE);
                 ret = SCPI_RES_ERR;
             }
-
-            buf[0] = 2;
-            buf[1] = dac_val & 0xFF;
-            buf[2] = (dac_val >> 8) & 0xFF;
-            write(fd, buf, 3);
+            else
+            {
+                *(user_context->dac_bd) = par.content.value;
+            }
         }
         else
         {

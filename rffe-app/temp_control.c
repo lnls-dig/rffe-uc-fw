@@ -44,14 +44,24 @@ struct dac_write_back
     float* dac_bd;
 };
 
+static int write_dac_voltage(int fd, int channel, float voltage)
+{
+    uint16_t dac_val;
+    uint8_t buf[3];
+
+    dac_val = (voltage / 3.3) * 4095.0;
+    buf[0] = channel;
+    buf[1] = dac_val & 0xFF;
+    buf[2] = (dac_val >> 8) & 0xFF;
+    return write(fd, buf, 3);
+}
+
 static void* temp_control_server(void* args)
 {
     pid_ctrl_t pid_ac, pid_bd;
     float out_ac, out_bd, temp_ac, temp_bd;
     int temp_ac_fd, temp_bd_fd, dac_fd;
     b16_t temp;
-    uint8_t buf[3];
-    uint16_t dac_val;
     temp_ctrl_mode_t tctrl;
     struct dac_write_back* dac_out = args;
 
@@ -102,20 +112,11 @@ static void* temp_control_server(void* args)
 
             *dac_out->dac_ac = out_ac;
             *dac_out->dac_bd = out_bd;
-
-            dac_val = (out_ac / 3.3) * 4095.0;
-            buf[0] = 3;
-            buf[1] = dac_val & 0xFF;
-            buf[2] = (dac_val >> 8) & 0xFF;
-            write(dac_fd, buf, 3);
-
-            dac_val = (out_bd / 3.3) * 4095.0;
-            buf[0] = 2;
-            buf[1] = dac_val & 0xFF;
-            buf[2] = (dac_val >> 8) & 0xFF;
-            write(dac_fd, buf, 3);
-
         }
+
+        write_dac_voltage(dac_fd, 3, *dac_out->dac_ac);
+        write_dac_voltage(dac_fd, 2, *dac_out->dac_bd);
+
         usleep(100000);
     }
 

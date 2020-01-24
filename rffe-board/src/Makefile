@@ -36,7 +36,7 @@
 -include $(TOPDIR)/Make.defs
 
 ASRCS =
-CSRCS = lpc17_40_boot.c lpc17_40_leds.c
+CSRCS = lpc17_40_boot.c lpc17_40_leds.c lpc17_40_userleds.c
 
 ifeq ($(CONFIG_LIB_BOARDCTL),y)
 CSRCS += lpc17_40_appinit.c

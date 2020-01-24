@@ -34,6 +34,7 @@
 #include <sys/ioctl.h>
 #include <nuttx/rf/ioctl.h>
 #include <nuttx/rf/attenuator.h>
+#include <nuttx/leds/userled.h>
 
 #include "netutils/netlib.h"
 #include "netutils/dhcpc.h"
@@ -72,6 +73,10 @@ int rffe_startup(int argc, char* argv[])
 
     nsh_initialize();
 
+    int ledfd = open("/dev/statusleds", O_WRONLY);
+    ioctl(ledfd, ULEDIOC_SETALL, 0x01);
+    close(ledfd);
+
     nsh_telnetstart(AF_INET);
     task_create("nsh", 100, 2048, nsh_consolemain, nsh_argv);
 
@@ -99,6 +104,12 @@ int rffe_main(int argc, char *argv[])
     eth_addr_mode_t dhcp;
     struct attenuator_control att;
     int attfd;
+
+    /*
+     * dac_ac and dac_bd are shared between the temperature control
+     * server and scpi server to allow tracking of the actual DAC
+     * output value (the DAC is write-only)
+     */
     float dac_ac = 0.0;
     float dac_bd = 0.0;
 
@@ -166,8 +177,11 @@ int rffe_main(int argc, char *argv[])
         netconfig("eth0", &conf, 1);
     }
 
-
     print_netconfig(&conf);
+
+    int ledfd = open("/dev/statusleds", O_WRONLY);
+    ioctl(ledfd, ULEDIOC_SETALL, 0x00);
+    close(ledfd);
 
     /*
      * Temperature control server

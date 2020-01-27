@@ -48,6 +48,7 @@
 #include "up_arch.h"
 #include "up_internal.h"
 
+#include "lpc17_40_wdt.h"
 #include "mbed.h"
 
 /************************************************************************************
@@ -74,6 +75,13 @@
 
 void lpc17_40_boardinitialize(void)
 {
+  /*
+   * Clear watchdog overflow flag to allow UART ISP programming,
+   * reseting the microcontroller with P2.10 LOW will enter the ROM
+   * bootloader.
+   */
+  putreg32(0, LPC17_40_WDT_MOD);
+
   /* Configure on-board LEDs if LED support has been selected. */
 
 #ifdef CONFIG_ARCH_LEDS
@@ -91,6 +99,15 @@ void lpc17_40_boardinitialize(void)
 
 int board_reset(int arg)
 {
+  /*
+   * Set the watchdog overflow flag to force booting into application
+   * code as a partial mitigation against a hardware bug regarding the
+   * DTR and RTS lines floating when the USB-to-Serial converter isn't
+   * powered.
+   *
+   * The ROM bootloader will boot to the application if WDTOF is set.
+   */
+  putreg32(WDT_MOD_WDTOF, LPC17_40_WDT_MOD);
   up_systemreset();
   return 0;
 }

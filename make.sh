@@ -10,7 +10,7 @@ git_hash_tag() {
 	cd ..
 	RFFE_GIT_HASH=$(git describe --no-match --always --dirty --abbrev=40)
 	RFFE_GIT_TAG=$(git describe --exact-match --tags)
-	echo -e "/* Auto-generated file */\n\n#define APPS_GIT_HASH  \"${APPS_GIT_HASH}\"\n#define NUTTX_GIT_HASH \"${NUTTX_GIT_HASH}\"\n#define RFFE_GIT_HASH  \"${RFFE_GIT_HASH}\"\n#define RFFE_GIT_TAG   \"${RFFE_GIT_TAG}\"\n" > rffe-app/git_version.h
+	printf "/* Auto-generated file */\n\n#define APPS_GIT_HASH  \"${APPS_GIT_HASH}\"\n#define NUTTX_GIT_HASH \"${NUTTX_GIT_HASH}\"\n#define RFFE_GIT_HASH  \"${RFFE_GIT_HASH}\"\n#define RFFE_GIT_TAG   \"${RFFE_GIT_TAG}\"\n" > rffe-app/git_version.h
 }
 
 if [ -z "$JOBS" ]; then
@@ -43,4 +43,6 @@ elif test "$cmd" = "clean"; then
 	rm -f apps/external rffe-app/git_version.h
 elif test "$cmd" = "flash"; then
 	openocd -f scripts/openocd/lpc17-cmsis.cfg -c "program nuttx/nuttx.bin 0x10000; reset; shutdown"
+else
+	echo "Error: unknown command ${cmd}"
 fi

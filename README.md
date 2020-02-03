@@ -13,7 +13,7 @@ First make sure you have installed on your system:
 * arm-none-eabi-gcc
 * arm-none-eabi-binutils
 * arm-none-eabi-newlib
-* kconfig-frontends - Can be obtained [here](https://bitbucket.org/nuttx/tools/src/master/)
+* kconfig-frontends - See instructions bellow
 * openocd
 
 To build, you need to configure nuttx and start the compilation:
@@ -24,6 +24,27 @@ $ ./make.sh build
 ```
 
 If everything goes well, the files ```nuttx/nuttx``` (elf with debug symbols) and ```nuttx/nuttx.bin``` (raw binary) will be available.
+
+## Installing kconfig-frontends
+
+An out-of-tree version of kconfig-frontends is provided under ```tools/kconfig-frontends```. To build it make sure you have the following tools installed on your system:
+* automake
+* autoconf
+* m4
+* flex
+* bison
+* gperf
+
+Enter the ```tools/kconfig-frontends``` directory and execute:
+```bash
+$ aclocal
+$ autoconf
+$ automake
+$ ./configure --prefix=your_prefix_path
+$ make install
+```
+
+Make sure to include the ```your_prefix_path/usr/bin``` directory in your ```PATH``` environment variable.
 
 ## Flashing
 

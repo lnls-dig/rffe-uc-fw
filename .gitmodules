@@ -1,6 +1,3 @@
-[submodule "mbed-os"]
-	path = legacy/mbed-os
-	url = git://github.com/ARMmbed/mbed-os
 [submodule "nuttx"]
 	path = nuttx
 	url = https://github.com/lnls-dig/nuttx.git

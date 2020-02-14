@@ -185,7 +185,7 @@ class RFFEControllerBoard:
         boot_sec[248] = major
         boot_sec[249] = minor
         boot_sec[250] = patch
-        boot_sec[251] = 1
+        boot_sec[251] = 2 if bootloader else 1
         boot_sec[252] = 0xAA
         boot_sec[253] = 0xAA
         boot_sec[254] = 0xAA

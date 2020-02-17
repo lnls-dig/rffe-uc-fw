@@ -14,7 +14,7 @@ CFLAGS     = -fdata-sections -ffunction-sections -g3 -Wall -mcpu=cortex-m3 -mlit
 ASFLAGS    =  $(CFLAGS)
 LDFLAGS    = -T $(LDSCRIPT) -Wl,--gc-sections --specs=nano.specs --specs=nosys.specs
 
-.PHONY: all clean flash burn hex bin
+.PHONY: all clean flash
 
 all: $(PRJ_NAME).bin
 
@@ -33,11 +33,11 @@ $(PRJ_NAME).elf: $(OBJ)
 clean:
 	rm -f $(OBJ) $(PRJ_NAME).elf $(PRJ_NAME)-pad.elf $(PRJ_NAME).hex $(PRJ_NAME).bin $(SRCDIR)/*.d
 
-flash: bin
+flash: $(PRJ_NAME).bin
 	$(PROGRAMMER) $(PGFLAGS)
 
 $(PRJ_NAME)-pad.elf: $(PRJ_NAME).elf
 	$(OBJCOPY) --gap-fill 0xFF --pad-to 0x10000 $< $@
 
 $(PRJ_NAME).bin: $(PRJ_NAME)-pad.elf
-	$(OBJCOPY) -O binary $< $(PRJ_NAME).bin
+	$(OBJCOPY) -O binary $< $@

@@ -1,0 +1,8 @@
+*.o
+*.a
+*.hex
+*.bin
+*.elf
+*.d
+openocd.log
+.interface

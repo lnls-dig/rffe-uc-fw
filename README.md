@@ -48,7 +48,7 @@ Make sure to include the ```your_prefix_path/usr/bin``` directory in your ```PAT
 
 ## Flashing
 
-The nuttx.bin image does not contains the bootloader and is expected to be loaded at 0x00010000, so if you are flashing blank uCs, flash the bootloader from legacy/bootloader first.
+The nuttx.bin image does not contains the bootloader and is expected to be loaded at 0x00010000, so if you are flashing blank uCs, flash the bootloader from bootloader/ first.
 
 ### Via CMSIS-DAP
 

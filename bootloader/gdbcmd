@@ -1,0 +1,24 @@
+define rst
+	tb main
+	monitor reset halt
+	c
+end
+
+define ld
+	make
+	load
+	rst
+end
+
+target remote | openocd -c "gdb_port pipe; log_output openocd.log" -f ../scripts/openocd/lpc17-cmsis.cfg
+
+python
+from cmdebug.svd_gdb import LoadSVD
+from cmdebug.dwt_gdb import DWT
+
+DWT()
+LoadSVD()
+
+end
+
+svd_load ../scripts/gdb/LPC176x5x_v0.2.svd

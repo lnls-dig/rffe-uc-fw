@@ -30,6 +30,43 @@ class RFFEFWUpdate:
         self.s.send(data)
         ans = self.s.recv(1)
 
+    def reprogram(self, file_path, version, bootloader=False):
+        major, minor, patch = map(int,re.split('[., _]',version))
+
+        start_addr = 0x48000
+
+        with open(file_path, "rb") as f:
+
+            self.erase_all()
+
+            buf = f.read(256)
+            while buf != b"":
+
+                pad = bytearray()
+                pad.extend(buf)
+
+                if len(buf) < 256:
+                    pad.extend(b'\377' * (256 - len(pad)))
+
+                self.write_sector(pad, start_addr)
+                start_addr += 256
+                buf = f.read(256)
+
+        boot_sec = bytearray()
+        boot_sec.extend(b'\377' * 256)
+
+        boot_sec[248] = major
+        boot_sec[249] = minor
+        boot_sec[250] = patch
+        boot_sec[251] = 2 if bootloader else 1
+        boot_sec[252] = 0xAA
+        boot_sec[253] = 0xAA
+        boot_sec[254] = 0xAA
+        boot_sec[255] = 0xAA
+        self.write_sector(boot_sec, 0x0007FF00)
+        self.reset()
+        self.close()
+
     def reset(self):
         self.s.send(b"r")
         self.s.close()
@@ -155,44 +192,8 @@ class RFFEControllerBoard:
         first argument, a string, is the path to the binary file which corresponds to the
         program will be loaded in the device. The second argument is the new firmware version
         formated as: x.y.z or x_y_z"""
-        pass
-        major, minor, patch = map(int,re.split('[., _]',version))
-
-        start_addr = 0x48000
-
         rffe_fw = RFFEFWUpdate(self.ip)
-
-        with open(file_path, "rb") as f:
-
-            rffe_fw.erase_all()
-
-            buf = f.read(256)
-            while buf != b"":
-
-                pad = bytearray()
-                pad.extend(buf)
-
-                if len(buf) < 256:
-                    pad.extend(b'\377' * (256 - len(pad)))
-
-                rffe_fw.write_sector(pad, start_addr)
-                start_addr += 256
-                buf = f.read(256)
-
-        boot_sec = bytearray()
-        boot_sec.extend(b'\377' * 256)
-
-        boot_sec[248] = major
-        boot_sec[249] = minor
-        boot_sec[250] = patch
-        boot_sec[251] = 2 if bootloader else 1
-        boot_sec[252] = 0xAA
-        boot_sec[253] = 0xAA
-        boot_sec[254] = 0xAA
-        boot_sec[255] = 0xAA
-        rffe_fw.write_sector(boot_sec, 0x0007FF00)
-        rffe_fw.reset()
-        self.close()
+        rffe_fw.reprogram(file_path, version, bootloader);
 
     def set_pid_ac_kc(self, value):
         """Sets the PID Kc parameter in the A/C front-end. The value is passed as a floating-point numpber."""

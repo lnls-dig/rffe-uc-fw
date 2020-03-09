@@ -9,7 +9,11 @@ git_hash_tag() {
 	NUTTX_GIT_HASH=$(git describe --no-match --always --dirty --abbrev=40)
 	cd ..
 	RFFE_GIT_HASH=$(git describe --no-match --always --dirty --abbrev=40)
-	RFFE_GIT_TAG=$(git describe --exact-match --tags)
+	RFFE_GIT_TAG=$(git describe --exact-match --tags 2>/dev/null)
+	if [ -z "$RFFE_GIT_TAG" ]; then
+		RFFE_GIT_TAG="devel"
+		echo "Development build"
+	fi
 	printf "/* Auto-generated file */\n\n#define APPS_GIT_HASH  \"${APPS_GIT_HASH}\"\n#define NUTTX_GIT_HASH \"${NUTTX_GIT_HASH}\"\n#define RFFE_GIT_HASH  \"${RFFE_GIT_HASH}\"\n#define RFFE_GIT_TAG   \"${RFFE_GIT_TAG}\"\n" > rffe-app/git_version.h
 }
 

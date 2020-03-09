@@ -1,23 +1,24 @@
-def rst
+define rst
+	set *((uint32_t*) 0x40000000) = 1 << 2
 	monitor reset halt
 end
 
-def start_timer
+define start_timer
 	set *(unsigned int*)0xE000EDFC |= 0x01000000
 	set *(unsigned int*)0xE0001004 = 0
 	set *(unsigned int*)0xE0001000 = 1
 end
 
-def read_timer
+define read_timer
 	p *(unsigned int*)0xE0001004
 end
 
-def ldr
+define ldr
 	load
 	rst
 end
 
-def ldrc
+define ldrc
 	load
 	rst
 	c

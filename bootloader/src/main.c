@@ -52,7 +52,7 @@ typedef struct
 
 const fw_info* fw_header = (fw_info*)((uint32_t)flash_end_addr - sizeof(fw_info));
 
-__attribute__ ((long_call, noinline, section (".data")))
+__attribute__ ((long_call, noinline, section (".ramtext")))
 uint8_t get_sector_number(uint32_t flash)
 {
     uint8_t ret = 0;
@@ -67,7 +67,7 @@ uint8_t get_sector_number(uint32_t flash)
     return ret;
 }
 
-__attribute__ ((long_call, noinline, section (".data")))
+__attribute__ ((long_call, noinline, section (".ramtext")))
 void copy_flash_region(uint32_t* src, uint32_t* dest, size_t len, uint32_t cpu_clk_khz)
 {
     uint32_t buffer[64];
@@ -88,7 +88,7 @@ void copy_flash_region(uint32_t* src, uint32_t* dest, size_t len, uint32_t cpu_c
     }
 }
 
-__attribute__ ((long_call, noinline, section (".data")))
+__attribute__ ((long_call, noinline, section (".ramtext")))
 void update_app(uint32_t cpu_clk_khz)
 {
     lpc17_iap_prepare_sectors(app_start_sec, update_start_sec - 1);
@@ -105,7 +105,7 @@ void update_app(uint32_t cpu_clk_khz)
     start_app((uint32_t*)0x10000);
 }
 
-__attribute__ ((long_call, noinline, section (".data")))
+__attribute__ ((long_call, noinline, section (".ramtext")))
 void update_bootloader(uint32_t cpu_clk_khz)
 {
     lpc17_iap_prepare_sectors(boot_start_sec, boot_end_sec);

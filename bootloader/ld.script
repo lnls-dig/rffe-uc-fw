@@ -195,6 +195,7 @@ SECTIONS
     *(vtable)
     *(.data)
     *(.data.*)
+    *(.ramtext)
 
     . = ALIGN(4);
     /* preinit data */

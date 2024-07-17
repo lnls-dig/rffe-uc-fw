@@ -178,11 +178,6 @@ int scpi_server_start(float* dac_ac, float* dac_bd)
             fprintf(stderr, "setsockopt(SO_RCVTIMEO) failed: %d\n", ret);
         }
 
-        if (ret < 0)
-        {
-            fprintf(stderr, "setsockopt(SO_KEEPALIVE) failed: %d\n", ret);
-        }
-
         int active_threads_local;
 
         pthread_mutex_lock(&active_threads_lock);

@@ -55,15 +55,14 @@ static void* handle_client(void* args)
     scpi_error_t scpi_error_queue_data[SCPI_ERROR_QUEUE_SIZE];
     char scpi_input_buffer[SCPI_INPUT_BUFFER_LENGTH];
     scpi_t scpi_context;
-    pthread_mutex_t counter_lock;
 
     int ledfd = open("/dev/statusleds", O_WRONLY);
     ioctl(ledfd, ULEDIOC_SETALL, 0x02);
     close(ledfd);
 
-    pthread_mutex_lock(&counter_lock);
+    pthread_mutex_lock(context->active_threads_lock);
     (*active_threads)++;
-    pthread_mutex_unlock(&counter_lock);
+    pthread_mutex_unlock(context->active_threads_lock);
 
     /* user_context will be pointer to socket */
     SCPI_Init(&scpi_context,
@@ -100,7 +99,7 @@ static void* handle_client(void* args)
      */
     free(context);
 
-    pthread_mutex_lock(&counter_lock);
+    pthread_mutex_lock(context->active_threads_lock);
     (*active_threads)--;
     if (*active_threads < 1)
     {
@@ -108,18 +107,26 @@ static void* handle_client(void* args)
         ioctl(ledfd, ULEDIOC_SETALL, 0x00);
         close(ledfd);
     }
-    pthread_mutex_unlock(&counter_lock);
+    pthread_mutex_unlock(context->active_threads_lock);
     return NULL;
 }
 
 int scpi_server_start(float* dac_ac, float* dac_bd)
 {
     int sockfd, newsockfd;
+    pthread_mutex_t active_threads_lock;
     int active_threads = 0;
     int ret;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     pthread_t thread;
+
+    ret = pthread_mutex_init(&active_threads_lock, NULL);
+    if (ret != 0)
+    {
+        perror("pthread_mutex_init");
+        return -1;
+    }
 
     /*
      * Open a socket
@@ -176,9 +183,16 @@ int scpi_server_start(float* dac_ac, float* dac_bd)
             fprintf(stderr, "setsockopt(SO_KEEPALIVE) failed: %d\n", ret);
         }
 
-        if (active_threads < 4)
+        int active_threads_local;
+
+        pthread_mutex_lock(&active_threads_lock);
+        active_threads_local = active_threads;
+        pthread_mutex_unlock(&active_threads_lock);
+
+        if (active_threads_local < 4)
         {
             user_data_t* ccontext = malloc(sizeof(user_data_t));
+            ccontext->active_threads_lock = &active_threads_lock;
             ccontext->active_threads = &active_threads;
             ccontext->sockfd = newsockfd;
             ccontext->dac_ac = dac_ac;

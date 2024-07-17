@@ -24,12 +24,15 @@
 #ifndef SCPI_INTERFACE_H_
 #define SCPI_INTERFACE_H_
 
+#include <pthread.h>
+
 #include "scpi/scpi.h"
 #include "scpi-def.h"
 
 typedef struct
 {
     int sockfd;
+    pthread_mutex_t* active_threads_lock;
     int* active_threads;
     float* dac_ac;
     float* dac_bd;

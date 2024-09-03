@@ -94,11 +94,6 @@ static void* handle_client(void* args)
 
     close(sockfd);
 
-    /*
-     * Free client context
-     */
-    free(context);
-
     pthread_mutex_lock(context->active_threads_lock);
     (*active_threads)--;
     if (*active_threads < 1)
@@ -108,6 +103,12 @@ static void* handle_client(void* args)
         close(ledfd);
     }
     pthread_mutex_unlock(context->active_threads_lock);
+
+    /*
+     * Free client context
+     */
+    free(context);
+
     return NULL;
 }
 

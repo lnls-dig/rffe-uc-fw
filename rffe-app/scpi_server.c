@@ -22,6 +22,7 @@
  ****************************************************************************/
 
 #include <errno.h>
+#include <poll.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -46,6 +47,8 @@
 #include "scpi_interface.h"
 #include "scpi_rffe_cmd.h"
 #include "scpi_tables.h"
+
+#define SOCKET_TIMEOUT_MS 30000 /* socket timeout is 30s */
 
 static void* handle_client(void* args)
 {
@@ -79,8 +82,22 @@ static void* handle_client(void* args)
      * We also cast it to an int here to simplify printing. */
     int tid = getpid();
 
+    struct pollfd fds = {.fd = sockfd, .events = POLLIN};
+
     while(1)
     {
+        int rp = poll(&fds, 1, SOCKET_TIMEOUT_MS);
+        if (rp == 0)
+        {
+            printf("Thread %d, poll timed out\n", tid);
+            break;
+        }
+        else if (rp < 0)
+        {
+            printf("Thread %d, poll error (%d)\n", tid, errno);
+            break;
+        }
+
         int n = recv(sockfd, tcp_buff, sizeof(tcp_buff), 0);
 
         if (n == 0)
@@ -168,20 +185,6 @@ int scpi_server_start(float* dac_ac, float* dac_bd)
     {
         clilen = sizeof(cli_addr);
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-
-        struct timeval tv;
-
-        /*
-         * Receive timeout: 30s
-         */
-        tv.tv_sec  = 30;
-        tv.tv_usec = 0;
-        ret = setsockopt(newsockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
-
-        if (ret < 0)
-        {
-            fprintf(stderr, "setsockopt(SO_RCVTIMEO) failed: %d\n", ret);
-        }
 
         int active_threads_local;
 

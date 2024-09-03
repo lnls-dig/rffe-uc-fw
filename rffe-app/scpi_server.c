@@ -21,6 +21,7 @@
  *
  ****************************************************************************/
 
+#include <errno.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -75,18 +76,25 @@ static void* handle_client(void* args)
 
     scpi_context.user_context = context;
 
+    /* XXX: this is the thread ID, because this version of NuttX returns the
+     * thread ID for getpid(), and does not implement gettid() yet. See
+     * https://github.com/apache/nuttx/issues/2499 for more information.
+     *
+     * We also cast it to an int here to simplify printing. */
+    int tid = getpid();
+
     while(1)
     {
         int n = recv(sockfd, tcp_buff, sizeof(tcp_buff), 0);
 
         if (n == 0)
         {
-            printf("Thread %d, connection closed\n", sockfd);
+            printf("Thread %d, connection closed\n", tid);
             break;
         }
         else if (n < 0)
         {
-            printf("Thread %d, connection error (%d)\n", sockfd, n);
+            printf("Thread %d, connection error (%d)\n", tid, errno);
             break;
         }
         SCPI_Input(&scpi_context, tcp_buff, n);

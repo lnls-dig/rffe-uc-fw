@@ -61,10 +61,6 @@ static void* handle_client(void* args)
     ioctl(ledfd, ULEDIOC_SETALL, 0x02);
     close(ledfd);
 
-    pthread_mutex_lock(context->active_threads_lock);
-    (*active_threads)++;
-    pthread_mutex_unlock(context->active_threads_lock);
-
     /* user_context will be pointer to socket */
     SCPI_Init(&scpi_context,
               scpi_commands,
@@ -208,6 +204,10 @@ int scpi_server_start(float* dac_ac, float* dac_bd)
             printf("New connection!\n");
             pthread_create(&thread, &attr, &handle_client, ccontext);
             pthread_detach(thread);
+
+            pthread_mutex_lock(&active_threads_lock);
+            active_threads++;
+            pthread_mutex_unlock(&active_threads_lock);
         }
         else
         {

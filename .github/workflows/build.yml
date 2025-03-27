@@ -1,0 +1,31 @@
+name: Build
+on:
+  push:
+    branches:
+      - master
+      - devel
+  pull_request:
+
+jobs:
+  rffe-build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/lnls-dig/rffe-builder:latest
+    steps:
+      - name: Actions
+        uses: actions/checkout@v4
+
+      - name: Set safe directory
+        run: git config --global --add safe.directory $PWD
+
+      - name: Init submodules
+        run: git submodule update --init --recursive
+
+      - name: Clean build
+        run: ./make.sh clean
+
+      - name: Configure build
+        run: ./make.sh configure
+
+      - name: Build firmware
+        run: ./make.sh build

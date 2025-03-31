@@ -4,11 +4,11 @@ cmd="$1"
 
 git_hash_tag() {
 	cd apps/
-	APPS_GIT_HASH=$(git describe --no-match --always --dirty --abbrev=40)
+	APPS_GIT_HASH=$(git rev-parse HEAD)
 	cd ../nuttx
-	NUTTX_GIT_HASH=$(git describe --no-match --always --dirty --abbrev=40)
+	NUTTX_GIT_HASH=$(git rev-parse HEAD)
 	cd ..
-	RFFE_GIT_HASH=$(git describe --no-match --always --dirty --abbrev=40)
+	RFFE_GIT_HASH=$(git rev-parse HEAD)
 	RFFE_GIT_TAG=$(git describe --exact-match --tags 2>/dev/null)
 	if [ -z "$RFFE_GIT_TAG" ]; then
 		RFFE_GIT_TAG="devel"

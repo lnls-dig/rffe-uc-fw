@@ -21,7 +21,7 @@ except:
 
 print("Connecting to " + ip_addr + " ...")
 try:
-    rffe = RFFEControllerBoard(ip_addr)
+    rffe = RFFEFWUpdate(ip_addr)
 except:
     print("Couldn't connect to device!")
     exit(1)

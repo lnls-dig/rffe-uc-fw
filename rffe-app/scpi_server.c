@@ -46,11 +46,9 @@
 #include "scpi_rffe_cmd.h"
 #include "scpi_tables.h"
 
-static void* handle_client(void* args)
+static void handle_client(user_data_t * context)
 {
-    user_data_t* context = (user_data_t*)args;
     int sockfd = context->sockfd;
-    int* active_threads = context->active_threads;
     char tcp_buff[16];
     scpi_error_t scpi_error_queue_data[SCPI_ERROR_QUEUE_SIZE];
     char scpi_input_buffer[SCPI_INPUT_BUFFER_LENGTH];
@@ -58,13 +56,7 @@ static void* handle_client(void* args)
 
     int ledfd = open("/dev/statusleds", O_WRONLY);
     ioctl(ledfd, ULEDIOC_SETALL, 0x02);
-    close(ledfd);
 
-    pthread_mutex_lock(context->active_threads_lock);
-    (*active_threads)++;
-    pthread_mutex_unlock(context->active_threads_lock);
-
-    /* user_context will be pointer to socket */
     SCPI_Init(&scpi_context,
               scpi_commands,
               &scpi_interface,
@@ -75,63 +67,38 @@ static void* handle_client(void* args)
 
     scpi_context.user_context = context;
 
-    while(1)
+    while (1)
     {
         int n = recv(sockfd, tcp_buff, sizeof(tcp_buff), 0);
 
         if (n == 0)
         {
-            printf("Thread %d, connection closed\n", sockfd);
+            printf("Connection closed\n");
             break;
         }
         else if (n < 0)
         {
-            printf("Thread %d, connection error (%d)\n", sockfd, n);
+            printf("Connection error (%d)\n", -errno);
             break;
         }
+
         SCPI_Input(&scpi_context, tcp_buff, n);
     }
-
+    printf("Closing the socket\n");
     close(sockfd);
+    printf("Socket closed\n");
 
-    pthread_mutex_lock(context->active_threads_lock);
-    (*active_threads)--;
-    if (*active_threads < 1)
-    {
-        ledfd = open("/dev/statusleds", O_WRONLY);
-        ioctl(ledfd, ULEDIOC_SETALL, 0x00);
-        close(ledfd);
-    }
-    pthread_mutex_unlock(context->active_threads_lock);
-
-    /*
-     * Free client context
-     */
-    free(context);
-
-    return NULL;
+    ioctl(ledfd, ULEDIOC_SETALL, 0x00);
+    close(ledfd);
 }
 
 int scpi_server_start(float* dac_ac, float* dac_bd)
 {
     int sockfd, newsockfd;
-    pthread_mutex_t active_threads_lock;
-    int active_threads = 0;
     int ret;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
-    pthread_t thread;
 
-    ret = pthread_mutex_init(&active_threads_lock, NULL);
-    if (ret != 0)
-    {
-        perror("pthread_mutex_init");
-        return -1;
-    }
-
-    /*
-     * Open a socket
-     */
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sockfd < 0)
@@ -150,13 +117,15 @@ int scpi_server_start(float* dac_ac, float* dac_bd)
     if (ret < 0)
     {
         perror("failed to bind a socket");
+        close(sockfd);
         return -1;
     }
 
-    ret = listen(sockfd, 4);
+    ret = listen(sockfd, 1);
     if (ret < 0)
     {
         perror("failed to listen to a socket");
+        close(sockfd);
         return -1;
     }
 
@@ -172,6 +141,7 @@ int scpi_server_start(float* dac_ac, float* dac_bd)
          */
         tv.tv_sec  = 30;
         tv.tv_usec = 0;
+
         ret = setsockopt(newsockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
 
         if (ret < 0)
@@ -179,34 +149,15 @@ int scpi_server_start(float* dac_ac, float* dac_bd)
             fprintf(stderr, "setsockopt(SO_RCVTIMEO) failed: %d\n", ret);
         }
 
-        int active_threads_local;
+        printf("New connection!\n");
 
-        pthread_mutex_lock(&active_threads_lock);
-        active_threads_local = active_threads;
-        pthread_mutex_unlock(&active_threads_lock);
-
-        if (active_threads_local < 4)
-        {
-            user_data_t* ccontext = malloc(sizeof(user_data_t));
-            ccontext->active_threads_lock = &active_threads_lock;
-            ccontext->active_threads = &active_threads;
-            ccontext->sockfd = newsockfd;
-            ccontext->dac_ac = dac_ac;
-            ccontext->dac_bd = dac_bd;
-
-            pthread_attr_t attr;
-            pthread_attr_init(&attr);
-            pthread_attr_setstacksize(&attr, 1280);
-            printf("New connection!\n");
-            pthread_create(&thread, &attr, &handle_client, ccontext);
-            pthread_detach(thread);
-        }
-        else
-        {
-            printf("Connection rejected, maximum active connections reached!\n");
-            close(newsockfd);
-        }
+        user_data_t ccontext;
+        ccontext.sockfd = newsockfd;
+        ccontext.dac_ac = dac_ac;
+        ccontext.dac_bd = dac_bd;
+        handle_client(&ccontext);
     }
 
+    close(sockfd);
     return 0;
 }

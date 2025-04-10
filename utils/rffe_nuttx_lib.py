@@ -4,9 +4,12 @@ import socket
 import re
 
 class RFFEFWUpdate:
-    def __init__(self, ip_addr, port = 9090):
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect((ip_addr, port))
+    def __init__(self, ip_addr, port = 9090, sock = None):
+        if sock == None:
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.s.connect((ip_addr, port))
+        else:
+            self.s = sock
 
     def erase_all(self):
         self.s.send(b"e")

@@ -21,6 +21,8 @@
  *
  ****************************************************************************/
 
+#include <errno.h>
+#include <poll.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -46,6 +48,8 @@
 #include "scpi_rffe_cmd.h"
 #include "scpi_tables.h"
 
+#define SOCKET_TIMEOUT_MS 30000 /* socket timeout is 30s */
+
 static void* handle_client(void* args)
 {
     user_data_t* context = (user_data_t*)args;
@@ -60,10 +64,6 @@ static void* handle_client(void* args)
     ioctl(ledfd, ULEDIOC_SETALL, 0x02);
     close(ledfd);
 
-    pthread_mutex_lock(context->active_threads_lock);
-    (*active_threads)++;
-    pthread_mutex_unlock(context->active_threads_lock);
-
     /* user_context will be pointer to socket */
     SCPI_Init(&scpi_context,
               scpi_commands,
@@ -75,18 +75,39 @@ static void* handle_client(void* args)
 
     scpi_context.user_context = context;
 
+    /* XXX: this is the thread ID, because this version of NuttX returns the
+     * thread ID for getpid(), and does not implement gettid() yet. See
+     * https://github.com/apache/nuttx/issues/2499 for more information.
+     *
+     * We also cast it to an int here to simplify printing. */
+    int tid = getpid();
+
+    struct pollfd fds = {.fd = sockfd, .events = POLLIN};
+
     while(1)
     {
+        int rp = poll(&fds, 1, SOCKET_TIMEOUT_MS);
+        if (rp == 0)
+        {
+            printf("Thread %d, poll timed out\n", tid);
+            break;
+        }
+        else if (rp < 0)
+        {
+            printf("Thread %d, poll error (%d)\n", tid, errno);
+            break;
+        }
+
         int n = recv(sockfd, tcp_buff, sizeof(tcp_buff), 0);
 
         if (n == 0)
         {
-            printf("Thread %d, connection closed\n", sockfd);
+            printf("Thread %d, connection closed\n", tid);
             break;
         }
         else if (n < 0)
         {
-            printf("Thread %d, connection error (%d)\n", sockfd, n);
+            printf("Thread %d, connection error (%d)\n", tid, errno);
             break;
         }
         SCPI_Input(&scpi_context, tcp_buff, n);
@@ -165,20 +186,6 @@ int scpi_server_start(float* dac_ac, float* dac_bd)
         clilen = sizeof(cli_addr);
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
-        struct timeval tv;
-
-        /*
-         * Receive timeout: 30s
-         */
-        tv.tv_sec  = 30;
-        tv.tv_usec = 0;
-        ret = setsockopt(newsockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
-
-        if (ret < 0)
-        {
-            fprintf(stderr, "setsockopt(SO_RCVTIMEO) failed: %d\n", ret);
-        }
-
         int active_threads_local;
 
         pthread_mutex_lock(&active_threads_lock);
@@ -200,6 +207,10 @@ int scpi_server_start(float* dac_ac, float* dac_bd)
             printf("New connection!\n");
             pthread_create(&thread, &attr, &handle_client, ccontext);
             pthread_detach(thread);
+
+            pthread_mutex_lock(&active_threads_lock);
+            active_threads++;
+            pthread_mutex_unlock(&active_threads_lock);
         }
         else
         {

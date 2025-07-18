@@ -17,11 +17,12 @@
 * Device reference: https://www.minicircuits.com/pdfs/DAT-31R5-SP+.pdf
 */
 
-#ifndef DAT31R5SP_H_
-#define DAT31R5SP_H_
+    #ifndef DAT31R5SP_H_
+    #define DAT31R5SP_H_
 
 #include "mbed.h"
 #include <cstdint>
+#include <iostream>
 
 /**
  * @class DAT31R5SP
@@ -55,6 +56,7 @@ public:
      */
     float get_attenuation();
 
+    bool is_valid() const;
 private:
     /**
     * @brief Sends a 6-bit attenuation control word to all active data channels via bit-banging.

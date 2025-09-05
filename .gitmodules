@@ -4,3 +4,15 @@
 [submodule "apps"]
 	path = apps
 	url = https://github.com/lnls-dig/nuttx-apps.git
+[submodule "new_rffe/mbed-libs"]
+	path = new_rffe/mbed-libs
+	url = git@gitlab.cnpem.br:GIE/libraries/mbed-libs.git
+	branch = rffe-drivers
+[submodule "new_rffe/mbed-os-mods"]
+	path = new_rffe/mbed-os-mods
+	url = https://github.com/cnpem/mbed-os-mods.git
+	branch = scpi-support
+[submodule "new_rffe/mbed-os"]
+	path = new_rffe/mbed-os
+	url = git@gitlab.cnpem.br:GIE/libraries/mbed-os.git
+	branch = ce-master
